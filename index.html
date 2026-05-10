@@ -5,37 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>DRISHTI AI | VIPUL VERMA</title>
     <style>
-        :root { --neon: #00f2ff; --glow: rgba(0, 242, 255, 0.5); }
+        :root { --neon: #00f2ff; --glow: rgba(0, 242, 255, 0.4); }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { background: #000; color: #fff; font-family: 'Inter', system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .app-card { width: 90%; max-width: 400px; background: rgba(20, 20, 20, 0.8); border: 1px solid var(--glow); border-radius: 30px; padding: 25px; backdrop-filter: blur(15px); box-shadow: 0 0 40px rgba(0,0,0,0.5); }
-        h1 { color: var(--neon); letter-spacing: 6px; text-shadow: 0 0 15px var(--neon); margin-bottom: 5px; font-size: 1.8rem; }
-        .tagline { font-size: 0.7rem; opacity: 0.5; letter-spacing: 2px; margin-bottom: 20px; text-transform: uppercase; }
-        .vision-engine { width: 100%; aspect-ratio: 1; background: #000; border-radius: 20px; overflow: hidden; border: 1px solid #333; margin-bottom: 20px; position: relative; }
+        .app-card { width: 90%; max-width: 400px; background: rgba(15, 15, 15, 0.95); border: 1px solid var(--neon); border-radius: 35px; padding: 30px; text-align: center; box-shadow: 0 0 30px rgba(0, 242, 255, 0.1); }
+        h1 { color: var(--neon); letter-spacing: 6px; text-shadow: 0 0 15px var(--neon); margin: 0; font-size: 2rem; }
+        .tagline { font-size: 0.7rem; opacity: 0.6; letter-spacing: 3px; margin-bottom: 25px; text-transform: uppercase; }
+        .vision-engine { width: 100%; aspect-ratio: 1; background: #000; border-radius: 25px; overflow: hidden; border: 2px solid #222; margin-bottom: 25px; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; }
-        #output { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; min-height: 70px; border-left: 4px solid var(--neon); font-size: 0.9rem; text-align: left; margin-bottom: 20px; }
-        .btn { width: 100%; padding: 15px; border-radius: 50px; border: 2px solid var(--neon); background: transparent; color: var(--neon); font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px; }
-        .btn:active { transform: scale(0.95); background: var(--neon); color: #000; }
-        .scan { position: absolute; top: 0; width: 100%; height: 2px; background: var(--neon); box-shadow: 0 0 10px var(--neon); animation: s 3s infinite linear; display: none; }
-        @keyframes s { 0% {top: 0%} 100% {top: 100%} }
+        #output { background: rgba(255,255,255,0.03); padding: 20px; border-radius: 20px; min-height: 90px; border-left: 5px solid var(--neon); font-size: 0.95rem; text-align: left; margin-bottom: 25px; line-height: 1.5; color: #eee; }
+        .btn { width: 100%; padding: 18px; border-radius: 50px; border: 2px solid var(--neon); background: transparent; color: var(--neon); font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 3px; font-size: 1rem; }
+        .btn:active { transform: scale(0.96); background: var(--neon); color: #000; box-shadow: 0 0 30px var(--neon); }
+        .scan { position: absolute; top: 0; width: 100%; height: 3px; background: var(--neon); box-shadow: 0 0 15px var(--neon); animation: s 2.5s infinite ease-in-out; display: none; z-index: 5; }
+        @keyframes s { 0%, 100% {top: 5%} 50% {top: 95%} }
     </style>
 </head>
 <body>
     <div class="app-card">
         <h1>DRISHTI</h1>
-        <div class="tagline">Neural Vision by Vipul</div>
+        <div class="tagline">Neural Vision Engine</div>
         <div class="vision-engine">
             <div id="scan" class="scan"></div>
             <video id="v" autoplay playsinline></video>
         </div>
-        <div id="output">सिस्टम तैयार है। 'एक्टिवेट' करें।</div>
-        <button class="btn" id="go">एक्टिवेट</button>
+        <div id="output">सिस्टम तैयार है। 'सक्रिय करें' बटन दबाएं।</div>
+        <button class="btn" id="go">सक्रिय करें</button>
     </div>
 
     <canvas id="c" style="display:none;"></canvas>
 
     <script type="module">
-        const key = "AIzaSyDiFQ7TSHMBFMesqpnB1jd25eP4qvkb-OY";
+        // नई API Key यहाँ सुरक्षित है
+        const key = "AIzaSyC6m59_LLFOyvtMW16WodhZGk05LEx_smo";
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+        
         const v = document.getElementById('v');
         const btn = document.getElementById('go');
         const out = document.getElementById('output');
@@ -45,24 +48,38 @@
 
         btn.onclick = async () => {
             if(!active) {
-                const s = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}});
-                v.srcObject = s;
-                sc.style.display = 'block';
-                btn.innerText = "पहचानें";
-                out.innerText = "कैमरा सक्रिय है। चीज़ों को पहचानें।";
-                active = true;
+                try {
+                    const s = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}});
+                    v.srcObject = s;
+                    sc.style.display = 'block';
+                    btn.innerText = "पहचानें (Analyze)";
+                    out.innerText = "कैमरा सक्रिय है। अब 'पहचानें' पर क्लिक करें।";
+                    active = true;
+                } catch(e) { out.innerText = "कैमरा एक्सेस नहीं मिला। कृपया सेटिंग चेक करें।"; }
             } else {
-                out.innerText = "सोच रहा हूँ...";
+                out.innerText = "AI विश्लेषण कर रहा है...";
                 cn.width = v.videoWidth; cn.height = v.videoHeight;
                 cn.getContext('2d').drawImage(v, 0, 0);
-                const b64 = cn.toDataURL('image/jpeg', 0.7).split(',')[1];
+                const b64 = cn.toDataURL('image/jpeg', 0.8).split(',')[1];
+                
                 try {
-                    const r = await fetch(url, { method: 'POST', body: JSON.stringify({contents: [{parts: [{text: "Describe this briefly in Hindi."}, {inline_data: {mime_type: "image/jpeg", data: b64}}]}]})});
+                    const r = await fetch(url, { 
+                        method: 'POST', 
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({contents: [{parts: [{text: "इस तस्वीर को देखें और बहुत कम शब्दों में सरल हिंदी में बताएं कि सामने क्या है।"}, {inline_data: {mime_type: "image/jpeg", data: b64}}]}]})
+                    });
                     const d = await r.json();
-                    const txt = d.candidates[0].content.parts[0].text;
-                    out.innerText = txt;
-                    const sp = new SpeechSynthesisUtterance(txt); sp.lang = 'hi-IN'; window.speechSynthesis.speak(sp);
-                } catch(e) { out.innerText = "Error!"; }
+                    
+                    if(d.error) {
+                        out.innerText = "Error: " + d.error.message;
+                    } else {
+                        const txt = d.candidates[0].content.parts[0].text;
+                        out.innerText = txt;
+                        const sp = new SpeechSynthesisUtterance(txt); 
+                        sp.lang = 'hi-IN'; 
+                        window.speechSynthesis.speak(sp);
+                    }
+                } catch(e) { out.innerText = "कनेक्शन में दिक्कत है। दोबारा कोशिश करें।"; }
             }
         };
     </script>
