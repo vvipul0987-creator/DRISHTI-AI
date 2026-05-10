@@ -1,16 +1,4 @@
-// voice.js — DRISHTI "Ultra-Responsive" AI Engine v6.0
-// Supercharged for iOS Safari & Android Chrome
-
-// 1. Auto-Inject Pulse Animation (तुम्हें CSS नहीं छेड़नी पड़ेगी)
-const style = document.createElement('style');
-style.innerHTML = `
-@keyframes aiPulse {
-    0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
-    70% { box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
-}`;
-document.head.appendChild(style);
-
+// voice.js — DRISHTI Intelligent Sync v7.0
 window.DrishtiVoice = {
     isListening: false,
     recognition: null,
@@ -19,25 +7,20 @@ window.DrishtiVoice = {
     init: function() {
         const mic = document.getElementById("mic");
         if(mic) {
-            mic.replaceWith(mic.cloneNode(true)); // पुराने बग्स को साफ़ करना
+            mic.replaceWith(mic.cloneNode(true)); 
             document.getElementById("mic").addEventListener("click", () => this.toggle());
         }
+        console.log("💎 DRISHTI Intelligent Sync Activated!");
     },
 
     toggle: function() {
-        this.isListening ? this.stop(true) : this.start();
+        this.isListening ? this.stopManual() : this.start();
     },
 
     start: function() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if(!SR) return alert("System Error: Browser Speech Engine Missing!");
+        if(!SR) return;
 
-        // 🟢 AI Interrupt: अगर DRISHTI बोल रही है, तो उसे तुरंत चुप कराओ
-        if(window.speechSynthesis && window.speechSynthesis.speaking) {
-            window.speechSynthesis.cancel();
-        }
-
-        // 🟢 iOS Wake Lock: सफारी के ऑडियो इंजन को जगाना
         if (window.AudioContext || window.webkitAudioContext) {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
             if (ctx.state === 'suspended') ctx.resume();
@@ -46,15 +29,11 @@ window.DrishtiVoice = {
         this.recognition = new SR();
         this.recognition.lang = "hi-IN"; 
         this.recognition.continuous = true; 
-        this.recognition.interimResults = true; // ⚡ लाइव टाइपिंग
+        this.recognition.interimResults = true;
 
         this.recognition.onstart = () => {
             this.isListening = true;
-            const mic = document.getElementById("mic");
-            mic.style.background = "#DC2626"; // गहरा लाल
-            mic.style.animation = "aiPulse 1.5s infinite"; // असली धड़कन
-            mic.innerHTML = "<span>🛑</span>"; // स्टॉप बटन
-            document.getElementById("sbar").textContent = "सुन रही हूँ... 🎙️";
+            this.updateUI(true);
         };
 
         this.recognition.onresult = (e) => {
@@ -62,69 +41,72 @@ window.DrishtiVoice = {
             let interim_transcript = '';
 
             for (let i = e.resultIndex; i < e.results.length; ++i) {
-                if (e.results[i].isFinal) {
-                    final_transcript += e.results[i][0].transcript;
-                } else {
-                    interim_transcript += e.results[i][0].transcript;
-                }
+                if (e.results[i].isFinal) final_transcript += e.results[i][0].transcript;
+                else interim_transcript += e.results[i][0].transcript;
             }
 
-            // ⚡ स्मूथ लाइव टाइपिंग: जो बोला, वो तुरंत स्क्रीन पर
-            const liveText = final_transcript + interim_transcript;
+            const currentText = final_transcript + interim_transcript;
             const inputField = document.getElementById("inp");
-            if(inputField) {
-                inputField.value = liveText;
-            }
+            if(inputField) inputField.value = currentText;
 
-            // 🧠 स्मार्ट ह्यूमन थिंकिंग टाइम (2.5 सेकंड)
+            // 🧠 स्मार्ट ऑटो-सेंड और ऑटो-ऑफ (2 सेकंड चुप रहने पर)
             clearTimeout(this.silenceTimer);
             this.silenceTimer = setTimeout(() => {
-                if(inputField.value.trim().length > 1) {
-                    this.stop(false); // ऑटो-सेंड ट्रिगर
+                if(currentText.trim().length > 1) {
+                    this.executeFinalSend();
                 }
-            }, 2500); 
+            }, 2000); 
         };
 
         this.recognition.onend = () => {
-            // 🛡️ iOS Self-Healing: अगर माइक गलती से कटा, तो खुद ऑन हो जाएगा
+            // अगर सिस्टम ने खुद बंद किया है, तो दोबारा ऑन नहीं होगा
             if(this.isListening) {
                 try { this.recognition.start(); } catch(e) {}
             }
         };
 
-        this.recognition.onerror = (e) => {
-            if(e.error !== 'no-speech') console.error("Mic Error:", e.error);
-        };
-
-        try {
-            this.recognition.start();
-        } catch(e) {
-            console.error("Start blocked:", e);
-        }
+        this.recognition.start();
     },
 
-    stop: function(manualTap = false) {
+    executeFinalSend: function() {
+        // 1. पहले लिसनिंग फ्लैग बंद करें ताकि ऑन-एंड लूप न बने
+        this.isListening = false;
+        
+        // 2. रिकग्निशन इंजन को पूरी तरह रोकें
+        if(this.recognition) this.recognition.stop();
+        
+        // 3. UI को रीसेट करें
+        this.updateUI(false);
+        
+        // 4. मैसेज सेंड करें
+        setTimeout(() => {
+            if(window.send && document.getElementById("inp").value.trim() !== "") {
+                window.send();
+                document.getElementById("inp").value = ""; // इनपुट साफ़ करें
+            }
+        }, 300);
+    },
+
+    stopManual: function() {
         this.isListening = false;
         if(this.recognition) this.recognition.stop();
-        clearTimeout(this.silenceTimer);
-        this.resetUI();
-        
-        // 🚀 सेंड करने का लॉजिक
-        setTimeout(() => {
-            const inputField = document.getElementById("inp");
-            if(window.send && inputField && inputField.value.trim() !== "") {
-                window.send();
-            }
-        }, 100);
+        this.updateUI(false);
     },
 
-    resetUI: function() {
-        this.isListening = false;
+    updateUI: function(active) {
         const mic = document.getElementById("mic");
-        mic.style.background = "#EC4899"; // वापस पिंक
-        mic.style.animation = "none";
-        mic.innerHTML = "🎙️";
-        document.getElementById("sbar").textContent = "तैयार हूँ!";
+        const sbar = document.getElementById("sbar");
+        if(active) {
+            mic.style.background = "#DC2626";
+            mic.innerHTML = "<span>🛑</span>";
+            mic.style.boxShadow = "0 0 20px #DC2626";
+            sbar.textContent = "सुन रही हूँ...";
+        } else {
+            mic.style.background = "#EC4899";
+            mic.innerHTML = "🎙️";
+            mic.style.boxShadow = "none";
+            sbar.textContent = "तैयार हूँ!";
+        }
     }
 };
 
