@@ -1,8 +1,9 @@
-// voice.js — DRISHTI Intelligent Sync v7.0
+// voice.js — DRISHTI Auto-Switch Engine v8.0
 window.DrishtiVoice = {
     isListening: false,
     recognition: null,
     silenceTimer: null,
+    autoStopTimeout: 1500, // बोलना बंद करने के बाद 1.5 सेकंड का इंतज़ार
 
     init: function() {
         const mic = document.getElementById("mic");
@@ -10,17 +11,18 @@ window.DrishtiVoice = {
             mic.replaceWith(mic.cloneNode(true)); 
             document.getElementById("mic").addEventListener("click", () => this.toggle());
         }
-        console.log("💎 DRISHTI Intelligent Sync Activated!");
+        console.log("⚡ Auto-Switch Engine Activated!");
     },
 
     toggle: function() {
-        this.isListening ? this.stopManual() : this.start();
+        this.isListening ? this.hardStop() : this.start();
     },
 
     start: function() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if(!SR) return;
 
+        // Safari Audio Fix
         if (window.AudioContext || window.webkitAudioContext) {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
             if (ctx.state === 'suspended') ctx.resume();
@@ -37,60 +39,61 @@ window.DrishtiVoice = {
         };
 
         this.recognition.onresult = (e) => {
-            let final_transcript = '';
-            let interim_transcript = '';
-
-            for (let i = e.resultIndex; i < e.results.length; ++i) {
-                if (e.results[i].isFinal) final_transcript += e.results[i][0].transcript;
-                else interim_transcript += e.results[i][0].transcript;
+            let transcript = "";
+            for (let i = 0; i < e.results.length; i++) {
+                transcript += e.results[i][0].transcript;
             }
 
-            const currentText = final_transcript + interim_transcript;
             const inputField = document.getElementById("inp");
-            if(inputField) inputField.value = currentText;
+            if(inputField) inputField.value = transcript;
 
-            // 🧠 स्मार्ट ऑटो-सेंड और ऑटो-ऑफ (2 सेकंड चुप रहने पर)
+            // 🧠 स्विच कंडीशन: जैसे ही बोलना बंद करोगे, टाइमर शुरू होगा
             clearTimeout(this.silenceTimer);
             this.silenceTimer = setTimeout(() => {
-                if(currentText.trim().length > 1) {
-                    this.executeFinalSend();
+                if(transcript.trim().length > 0) {
+                    this.hardStop(true); // ऑटोमेटिक बंद और सेंड
                 }
-            }, 2000); 
+            }, this.autoStopTimeout);
         };
 
+        this.recognition.onerror = () => this.hardStop(false);
+        
+        // सबसे ज़रूरी: ऑन-एंड पर खुद को दोबारा शुरू करने से रोकना
         this.recognition.onend = () => {
-            // अगर सिस्टम ने खुद बंद किया है, तो दोबारा ऑन नहीं होगा
-            if(this.isListening) {
-                try { this.recognition.start(); } catch(e) {}
+            if (this.isListening) {
+                // यह तभी चलेगा अगर एरर से बंद हुआ हो, सेंड होने पर नहीं
+                this.updateUI(false);
+                this.isListening = false;
             }
         };
 
         this.recognition.start();
     },
 
-    executeFinalSend: function() {
-        // 1. पहले लिसनिंग फ्लैग बंद करें ताकि ऑन-एंड लूप न बने
+    hardStop: function(shouldSend = false) {
+        // 1. स्टेट को तुरंत बंद करें
         this.isListening = false;
-        
-        // 2. रिकग्निशन इंजन को पूरी तरह रोकें
-        if(this.recognition) this.recognition.stop();
-        
-        // 3. UI को रीसेट करें
-        this.updateUI(false);
-        
-        // 4. मैसेज सेंड करें
-        setTimeout(() => {
-            if(window.send && document.getElementById("inp").value.trim() !== "") {
-                window.send();
-                document.getElementById("inp").value = ""; // इनपुट साफ़ करें
-            }
-        }, 300);
-    },
+        clearTimeout(this.silenceTimer);
 
-    stopManual: function() {
-        this.isListening = false;
-        if(this.recognition) this.recognition.stop();
+        // 2. रिकग्निशन को पूरी तरह से नष्ट (Destroy) करें
+        if(this.recognition) {
+            this.recognition.onend = null; // लूप तोड़ना
+            this.recognition.stop();
+        }
+
+        // 3. UI रीसेट
         this.updateUI(false);
+
+        // 4. सेंड लॉजिक
+        if(shouldSend) {
+            setTimeout(() => {
+                const inputField = document.getElementById("inp");
+                if(window.send && inputField.value.trim() !== "") {
+                    window.send();
+                    inputField.value = ""; 
+                }
+            }, 200);
+        }
     },
 
     updateUI: function(active) {
@@ -99,12 +102,10 @@ window.DrishtiVoice = {
         if(active) {
             mic.style.background = "#DC2626";
             mic.innerHTML = "<span>🛑</span>";
-            mic.style.boxShadow = "0 0 20px #DC2626";
             sbar.textContent = "सुन रही हूँ...";
         } else {
             mic.style.background = "#EC4899";
             mic.innerHTML = "🎙️";
-            mic.style.boxShadow = "none";
             sbar.textContent = "तैयार हूँ!";
         }
     }
