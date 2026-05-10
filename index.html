@@ -10,204 +10,210 @@ body{background:#08000F;color:#fff;font-family:'Segoe UI',Arial,sans-serif;min-h
 .header{width:100%;background:linear-gradient(180deg,#1A0533,#08000F);padding:18px 20px 12px;text-align:center;border-bottom:2px solid #7C3AED;position:sticky;top:0;z-index:100}
 .logo-row{display:flex;align-items:center;justify-content:center;gap:10px}
 .eye{font-size:30px}.logo{font-size:36px;font-weight:900;color:#F59E0B;letter-spacing:3px}
-.tagline{color:#A855F7;font-size:12px;margin-top:4px;letter-spacing:1px}
+.tagline{color:#A855F7;font-size:12px;margin-top:4px}
 .modes{display:flex;gap:8px;padding:12px 16px;width:100%;max-width:760px;justify-content:center;flex-wrap:wrap}
-.mbtn{background:#1E0A3C;border:2px solid #4C1D95;color:#C4B5FD;padding:10px 18px;border-radius:50px;font-size:13px;cursor:pointer;transition:all 0.25s;font-weight:600}
-.mbtn:hover{border-color:#7C3AED;color:#fff}
+.mbtn{background:#1E0A3C;border:2px solid #4C1D95;color:#C4B5FD;padding:10px 18px;border-radius:50px;font-size:13px;cursor:pointer;font-weight:600;transition:all 0.2s}
 .mbtn.on{background:#7C3AED;border-color:#F59E0B;color:#fff;box-shadow:0 0 16px #7C3AED88}
-.chat{width:100%;max-width:760px;flex:1;padding:12px 14px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;height:calc(100vh - 260px)}
-.chat::-webkit-scrollbar{width:4px}
-.chat::-webkit-scrollbar-thumb{background:#4C1D95;border-radius:4px}
-.bubble{max-width:82%;padding:12px 16px;border-radius:18px;font-size:14.5px;line-height:1.6;animation:fadeUp 0.3s ease}
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.chat{width:100%;max-width:760px;flex:1;padding:12px 14px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;height:calc(100vh - 260px)}
+.bubble{max-width:82%;padding:12px 16px;border-radius:18px;font-size:14px;line-height:1.6;animation:fadeUp 0.3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .bot{background:#1E0A3C;border-left:3px solid #F59E0B;align-self:flex-start}
-.usr{background:linear-gradient(135deg,#7C3AED,#5B21B6);align-self:flex-end;text-align:right;border-bottom-right-radius:4px}
-.bname{font-size:11px;font-weight:700;color:#F59E0B;margin-bottom:5px}
-.bubble pre{background:#0D001F;padding:12px;border-radius:10px;overflow-x:auto;margin:8px 0;border-left:3px solid #7C3AED}
-.bubble code{background:#0D001F;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:13px;color:#86EFAC}
+.usr{background:linear-gradient(135deg,#7C3AED,#5B21B6);align-self:flex-end}
+.bname{font-size:11px;font-weight:700;color:#F59E0B;margin-bottom:4px}
+.bubble pre{background:#0D001F;padding:12px;border-radius:8px;overflow-x:auto;margin:8px 0;border-left:3px solid #7C3AED}
+.bubble code{background:#0D001F;padding:2px 5px;border-radius:4px;font-family:monospace;color:#86EFAC;font-size:13px}
 .bubble pre code{background:transparent;padding:0}
-.typing{display:flex;gap:5px;padding:14px 18px;background:#1E0A3C;border-left:3px solid #F59E0B;border-radius:18px;align-self:flex-start;width:70px}
-.dot{width:8px;height:8px;background:#A855F7;border-radius:50%;animation:bounce 1.2s infinite}
+.typing{display:flex;gap:5px;padding:14px 18px;background:#1E0A3C;border-left:3px solid #F59E0B;border-radius:18px;align-self:flex-start;width:68px}
+.dot{width:7px;height:7px;background:#A855F7;border-radius:50%;animation:bounce 1.2s infinite}
 .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
-@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-8px)}}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-7px)}}
 .ibar{width:100%;max-width:760px;padding:10px 14px 20px;background:#08000F;border-top:1px solid #2D1155;position:sticky;bottom:0}
-.irow{display:flex;gap:8px;align-items:center;background:#1E0A3C;border:2px solid #7C3AED;border-radius:50px;padding:6px 6px 6px 16px;transition:border-color .2s}
+.irow{display:flex;gap:8px;align-items:center;background:#1E0A3C;border:2px solid #7C3AED;border-radius:50px;padding:6px 6px 6px 16px}
 .irow:focus-within{border-color:#F59E0B}
 .tinp{flex:1;background:transparent;border:none;color:#fff;font-size:15px;outline:none;padding:6px 0}
 .tinp::placeholder{color:#6B7280}
-.micbtn,.sendbtn{width:44px;height:44px;border-radius:50%;border:none;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
-.micbtn{background:#EC4899}
-.micbtn.listening{background:#DC2626;animation:pulse 1s infinite;box-shadow:0 0 16px #DC262688}
-.sendbtn{background:#7C3AED}
-.sendbtn:hover{background:#6D28D9;transform:scale(1.05)}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.micbtn,.sendbtn{width:44px;height:44px;border-radius:50%;border:none;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.micbtn{background:#EC4899}.sendbtn{background:#7C3AED}
+.micbtn.on{background:#DC2626;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
 .sbar{text-align:center;font-size:11px;color:#4B5563;margin-top:6px}
-.sbar.active{color:#A855F7}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.chip{background:#2D1155;border:1px solid #7C3AED;color:#C4B5FD;padding:7px 14px;border-radius:50px;font-size:12px;cursor:pointer;transition:all .2s}
+.chip{background:#2D1155;border:1px solid #7C3AED;color:#C4B5FD;padding:6px 13px;border-radius:50px;font-size:12px;cursor:pointer}
 .chip:hover{background:#7C3AED;color:#fff}
 </style>
 </head>
 <body>
+
 <div class="header">
-  <div class="logo-row"><span class="eye">👁</span><span class="logo">DRISHTI</span></div>
+  <div class="logo-row">
+    <span class="eye">👁</span>
+    <span class="logo">DRISHTI</span>
+  </div>
   <div class="tagline">Aapki Screen Dekhe · Hindi Mein Guide Kare · Hamesha Saath</div>
 </div>
+
 <div class="modes">
   <button class="mbtn on" onclick="setMode('chat',this)">💬 Baat Karo</button>
   <button class="mbtn" onclick="setMode('code',this)">💻 Coding</button>
   <button class="mbtn" onclick="setMode('web',this)">🌐 Website</button>
   <button class="mbtn" onclick="setMode('voice',this)">🎙 Voice</button>
 </div>
+
 <div class="chat" id="chat">
   <div class="bubble bot">
     <div class="bname">👁 DRISHTI</div>
     Namaste Vipul! 🙏 Main DRISHTI hoon — aapka personal AI guide.<br><br>
-    Main kar sakti hoon:<br>
-    • Coding sikhana — Python, HTML, JavaScript<br>
+    • Coding — Python, HTML, JavaScript<br>
     • Website banana — step by step<br>
-    • Kuch bhi poochho — main hoon!<br><br>
-    Kya karna hai aaj?
+    • Kuch bhi poochho — main hoon!
     <div class="chips">
-      <span class="chip" onclick="quickSend('Python mein calculator banao')">🐍 Python Calculator</span>
-      <span class="chip" onclick="quickSend('Meri pehli website kaise banao?')">🌐 Pehli Website</span>
-      <span class="chip" onclick="quickSend('JavaScript kya hai samjhao')">⚡ JavaScript</span>
-      <span class="chip" onclick="quickSend('Aaj ki koi interesting baat batao')">💬 Baat Karo</span>
+      <span class="chip" onclick="quickSend('Python mein calculator banao')">🐍 Calculator</span>
+      <span class="chip" onclick="quickSend('Pehli website kaise banao?')">🌐 Website</span>
+      <span class="chip" onclick="quickSend('JavaScript kya hai?')">⚡ JavaScript</span>
+      <span class="chip" onclick="quickSend('Aaj kuch interesting batao')">💬 Baat Karo</span>
     </div>
   </div>
 </div>
+
 <div class="ibar">
   <div class="irow">
     <input class="tinp" id="inp" placeholder="Kuch bhi poochho Vipul..." onkeypress="if(event.key==='Enter')send()"/>
     <button class="micbtn" id="mic" onclick="toggleMic()">🎙</button>
     <button class="sendbtn" onclick="send()">➤</button>
   </div>
-  <div class="sbar" id="sbar">Ready — Kuch bhi poochho!</div>
+  <div class="sbar" id="sbar">Ready!</div>
 </div>
+
 <script>
-const KEYS = [
-  "AIzaSyADhcm1znbxZjR6oSL1FM7DewxIrsimzC0",
-  "AIzaSyC_DONbSVMULJJX_Jf6EbhW7V8WdMvE-as"
-];
-const MODELS = [
-  "gemini-pro",
-  "gemini-1.0-pro",
-  "gemini-1.5-pro-latest"
-];
-let keyIndex = 0;
-let modelIndex = 0;
+const API_KEY = "AIzaSyBsdb8sLwIkklLRxLXoVYhbqmIOrZpw5LA";
+const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + API_KEY;
 
-function getURL() {
-  return `https://generativelanguage.googleapis.com/v1beta/models/${MODELS[modelIndex]}:generateContent?key=${KEYS[keyIndex]}`;
-}
+let history = [], listening = false, recog = null;
 
-let history=[],listening=false,recog=null;
-const SYSTEM=`Tu DRISHTI hai — Vipul ka personal AI assistant. Tu Hindi aur Hinglish mein baat karta hai — bilkul dost ki tarah. Coding mein poora working code de aur Hindi mein samjha. Website mein step by step guide kar. Hamesha encouraging reh: Shabash Vipul! Bahut acha! Koi baat nahi! Jawab clear rakho.`;
-const modeMsg={chat:"💬 Baat karo mode! Kuch bhi poochho!",code:"💻 Coding mode! Kaunsi language? Python, HTML, JavaScript?",web:"🌐 Website mode! Kya banana hai?",voice:"🎙 Voice mode! Mic tap karo!"};
+const SYSTEM = `Tu DRISHTI hai — Vipul ka personal AI assistant.
+Hindi aur Hinglish mein baat kar — bilkul dost ki tarah.
+Coding mein poora working code de, Hindi mein samjha.
+Website guide kar step by step.
+Hamesha bol: Shabash Vipul! Bahut acha! Koi baat nahi!
+Jawab 3-4 lines mein rakho — code ho toh poora do.`;
 
-function setMode(m,btn){
-  document.querySelectorAll('.mbtn').forEach(b=>b.classList.remove('on'));
+const modeMsg = {
+  chat: "💬 Baat karo! Kuch bhi poochho!",
+  code: "💻 Coding mode! Python, HTML, JavaScript — kya sikhna hai?",
+  web:  "🌐 Website mode! Kya banana hai?",
+  voice:"🎙 Voice mode! Mic tap karo aur boliye!"
+};
+
+function setMode(m, btn) {
+  document.querySelectorAll('.mbtn').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
-  addMsg("DRISHTI",modeMsg[m]);
+  addMsg("DRISHTI", modeMsg[m]);
 }
 
-function addMsg(who,text){
-  const chat=document.getElementById("chat");
-  const typing=document.getElementById("typing");
-  if(typing)typing.remove();
-  const d=document.createElement("div");
-  d.className=who==="DRISHTI"?"bubble bot":"bubble usr";
-  if(who==="DRISHTI"){
-    const fmt=text
-      .replace(/```(\w*)\n?([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
-      .replace(/`([^`]+)`/g,'<code>$1</code>')
-      .replace(/\n/g,'<br>');
-    d.innerHTML=`<div class="bname">👁 DRISHTI</div>${fmt}`;
-  }else{d.textContent=text;}
-  chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;
+function addMsg(who, text) {
+  const c = document.getElementById("chat");
+  const t = document.getElementById("typing");
+  if(t) t.remove();
+  const d = document.createElement("div");
+  d.className = who === "DRISHTI" ? "bubble bot" : "bubble usr";
+  if(who === "DRISHTI") {
+    const f = text
+      .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\n/g, '<br>');
+    d.innerHTML = `<div class="bname">👁 DRISHTI</div>${f}`;
+  } else {
+    d.textContent = text;
+  }
+  c.appendChild(d);
+  c.scrollTop = c.scrollHeight;
 }
 
-function showTyping(){
-  const chat=document.getElementById("chat");
-  const d=document.createElement("div");
-  d.className="typing";d.id="typing";
-  d.innerHTML='<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
-  chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;
+function showTyping() {
+  const c = document.getElementById("chat");
+  const d = document.createElement("div");
+  d.className = "typing"; d.id = "typing";
+  d.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+  c.appendChild(d);
+  c.scrollTop = c.scrollHeight;
 }
 
-function quickSend(msg){
-  document.getElementById("inp").value=msg;
+function quickSend(msg) {
+  document.getElementById("inp").value = msg;
   send();
 }
 
-async function send(){
-  const inp=document.getElementById("inp");
-  const msg=inp.value.trim();
-  if(!msg)return;
-  inp.value="";
-  addMsg("Vipul",msg);
+async function send() {
+  const inp = document.getElementById("inp");
+  const msg = inp.value.trim();
+  if(!msg) return;
+  inp.value = "";
+  addMsg("Vipul", msg);
   showTyping();
-  setSbar("DRISHTI soch rahi hai... 🤔",true);
-  history.push({role:"user",parts:[{text:msg}]});
+  document.getElementById("sbar").textContent = "DRISHTI soch rahi hai...";
+  history.push({role:"user", parts:[{text: msg}]});
 
-  let success = false;
-  for(let k=0; k<KEYS.length && !success; k++){
-    for(let m=0; m<MODELS.length && !success; m++){
-      keyIndex=k; modelIndex=m;
-      try{
-        const res=await fetch(getURL(),{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({
-            contents:history,
-            generationConfig:{temperature:0.8,maxOutputTokens:1500}
-          })
-        });
-        const data=await res.json();
-        if(!data.error && data.candidates?.[0]?.content?.parts?.[0]?.text){
-          const reply=data.candidates[0].content.parts[0].text;
-          history.push({role:"model",parts:[{text:reply}]});
-          addMsg("DRISHTI",reply);
-          speak(reply);
-          setSbar("Ready! ✅",false);
-          success=true;
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        system_instruction: {parts: [{text: SYSTEM}]},
+        contents: history,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 800
         }
-      }catch(e){}
+      })
+    });
+    const data = await res.json();
+    if(data.error) {
+      addMsg("DRISHTI", "⚠️ " + data.error.message);
+      document.getElementById("sbar").textContent = "Error!";
+      return;
     }
-  }
-  if(!success){
-    addMsg("DRISHTI","⚠️ Nayi API key chahiye! aistudio.google.com par jaao.");
-    setSbar("Error!",false);
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Dobara try karo!";
+    history.push({role:"model", parts:[{text: reply}]});
+    addMsg("DRISHTI", reply);
+    speak(reply);
+    document.getElementById("sbar").textContent = "Ready! ✅";
+  } catch(e) {
+    addMsg("DRISHTI", "⚠️ Network error! Internet check karo.");
+    document.getElementById("sbar").textContent = "Error!";
   }
 }
 
-function speak(text){
-  if(!window.speechSynthesis)return;
+function speak(text) {
+  if(!window.speechSynthesis) return;
   speechSynthesis.cancel();
-  const clean=text.replace(/```[\s\S]*?```/g,'code block').replace(/[*#`]/g,'').substring(0,300);
-  const u=new SpeechSynthesisUtterance(clean);
-  u.lang="hi-IN";u.rate=0.88;u.pitch=1.1;
+  const u = new SpeechSynthesisUtterance(
+    text.replace(/```[\s\S]*?```/g,'').replace(/[*#`]/g,'').substring(0,250)
+  );
+  u.lang = "hi-IN"; u.rate = 0.9; u.pitch = 1.1;
   speechSynthesis.speak(u);
 }
 
-function toggleMic(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){alert("Chrome use karo!");return;}
-  if(listening){recog.stop();return;}
-  recog=new SR();
-  recog.lang="hi-IN";
-  recog.onstart=()=>{listening=true;document.getElementById("mic").classList.add("listening");setSbar("Sun rahi hoon... 🎙",true);};
-  recog.onresult=(e)=>{document.getElementById("inp").value=e.results[0][0].transcript;send();};
-  recog.onend=()=>{listening=false;document.getElementById("mic").classList.remove("listening");setSbar("Ready! ✅",false);};
+function toggleMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR) { alert("Chrome use karo voice ke liye!"); return; }
+  if(listening) { recog.stop(); return; }
+  recog = new SR();
+  recog.lang = "hi-IN";
+  recog.onstart = () => {
+    listening = true;
+    document.getElementById("mic").classList.add("on");
+    document.getElementById("sbar").textContent = "Sun rahi hoon... 🎙";
+  };
+  recog.onresult = (e) => {
+    document.getElementById("inp").value = e.results[0][0].transcript;
+    send();
+  };
+  recog.onend = () => {
+    listening = false;
+    document.getElementById("mic").classList.remove("on");
+    document.getElementById("sbar").textContent = "Ready!";
+  };
   recog.start();
-}
-
-function setSbar(msg,active){
-  const s=document.getElementById("sbar");
-  s.textContent=msg;
-  s.className=active?"sbar active":"sbar";
 }
 </script>
 </body>
