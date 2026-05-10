@@ -1,58 +1,50 @@
 /**
- * DRISHTI OMNI-CORE v4.0
- * Pure Precision | Single-Message Lock | Auto-Kill Switch
+ * DRISHTI ENGINE - FINAL RECOVERY
+ * VIPUL VERMA SPECIAL | ZERO-LOOP | AUTO-CLEAN
  */
 
 window.DrishtiVoice = {
   isListening: false,
   recognition: null,
   silenceTimer: null,
-  isSending: false, // NEW: दोबारा सेंड होने से रोकने के लिए लॉक
+  isProcessing: false, // 🛡️ SAFETY LOCK: दोबारा सेंड होने से रोकने के लिए
 
-  injectAesthetics: function() {
-    if (document.getElementById('drishti-v4-css')) return;
-    const link = document.createElement('link');
-    link.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500;700&display=swap';
-    link.rel = 'stylesheet';
-    document.head.appendChild(link);
+  init: function() {
+    this.injectStyles();
+    const mic = document.getElementById("mic");
+    if(mic) {
+      // पुराने सारे Listeners खत्म करने के लिए Clone
+      const newMic = mic.cloneNode(true);
+      mic.replaceWith(newMic);
+      newMic.addEventListener("click", () => this.handleAction());
+    }
+    console.log("✅ DRISHTI FINAL ENGINE: READY");
+  },
 
+  injectStyles: function() {
+    if(document.getElementById('dv-fonts')) return;
     const style = document.createElement('style');
-    style.id = 'drishti-v4-css';
+    style.id = 'dv-fonts';
     style.innerHTML = `
+      @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500;700&display=swap');
       body { font-family: 'Rajdhani', sans-serif !important; }
-      #mic { font-family: 'Orbitron', sans-serif !important; transition: 0.3s ease; border-radius: 50%; }
-      .mic-on { 
-        background: #ff0055 !important; 
-        box-shadow: 0 0 20px #ff0055;
-        transform: scale(1.1);
-      }
-      #sbar { font-family: 'Orbitron', sans-serif; color: #ff0055; font-size: 12px; }
+      #mic { font-family: 'Orbitron', sans-serif !important; transition: 0.3s; }
+      .mic-active { background: #ff0055 !important; box-shadow: 0 0 20px #ff0055 !important; transform: scale(1.1); }
+      #sbar { color: #00f2ff; font-family: 'Orbitron'; font-size: 11px; }
     `;
     document.head.appendChild(style);
   },
 
-  init: function() {
-    this.injectAesthetics();
-    const mic = document.getElementById("mic");
-    if(mic) {
-      mic.replaceWith(mic.cloneNode(true)); 
-      document.getElementById("mic").addEventListener("click", () => this.toggle());
-    }
-    console.log("🌌 DRISHTI v4.0: One-Chat Logic Active");
+  handleAction: function() {
+    if (this.isListening) this.terminate(true);
+    else this.startEngine();
   },
 
-  toggle: function() {
-    this.isListening ? this.stopAndSend(true) : this.start();
-  },
+  startEngine: function() {
+    if(this.isProcessing) return; // अगर काम चल रहा है तो स्टार्ट मत करो
 
-  start: function() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SR) return;
-
-    // Reset State
-    this.isSending = false; 
-    const inp = document.getElementById("inp");
-    if(inp) inp.value = ""; // शुरुआत में ही साफ़
 
     this.recognition = new SR();
     this.recognition.lang = "hi-IN";
@@ -61,58 +53,58 @@ window.DrishtiVoice = {
 
     this.recognition.onstart = () => {
       this.isListening = true;
-      document.getElementById("mic").classList.add("mic-on");
+      document.getElementById("mic").classList.add("mic-active");
       document.getElementById("sbar").textContent = "LISTENING...";
     };
 
     this.recognition.onresult = (e) => {
-      if(this.isSending) return; // अगर सेंड हो रहा है तो कुछ मत करो
+      if(this.isProcessing) return;
 
-      let current = "";
+      let transcript = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        current += e.results[i][0].transcript;
+        transcript += e.results[i][0].transcript;
       }
+      
       const inp = document.getElementById("inp");
-      if(inp) inp.value = current;
+      if(inp) inp.value = transcript;
 
+      // 🧠 SMART STOP: 1.5 सेकंड की शांति मतलब बात खत्म
       clearTimeout(this.silenceTimer);
       this.silenceTimer = setTimeout(() => {
-        if(current.trim().length > 0) this.stopAndSend(true);
-      }, 1600);
+        if(transcript.trim().length > 0) this.terminate(true);
+      }, 1500);
     };
 
-    this.recognition.onend = () => {
-      if(this.isListening) this.recognition.start();
-    };
+    this.recognition.onerror = () => this.terminate(false);
+    this.recognition.onend = () => { if(this.isListening) this.recognition.start(); };
 
     this.recognition.start();
   },
 
-  stopAndSend: function(shouldSend) {
-    if(this.isSending) return; // दोबारा सेंड होने से बचाओ
-    
+  terminate: function(sendMsg) {
     this.isListening = false;
     clearTimeout(this.silenceTimer);
 
     if(this.recognition) {
-      this.recognition.onend = null; 
+      this.recognition.onend = null; // माइक को जबरदस्ती 'Kill' करना
       this.recognition.stop();
+      this.recognition = null;
     }
 
-    document.getElementById("mic").classList.remove("mic-on");
+    document.getElementById("mic").classList.remove("mic-active");
     document.getElementById("sbar").textContent = "STANDBY";
 
-    if(shouldSend) {
+    if(sendMsg && !this.isProcessing) {
       const inp = document.getElementById("inp");
       if(window.send && inp.value.trim() !== "") {
-        this.isSending = true; // लॉक लगाओ
+        this.isProcessing = true; // लॉक चालू
         window.send();
         
-        // सेंड करने के तुरंत बाद कचरा साफ़
+        // सेंड होने के बाद डेटा एकदम साफ़
         setTimeout(() => {
           inp.value = ""; 
-          this.isSending = false; // अगले मैसेज के लिए लॉक खोलो
-        }, 300);
+          this.isProcessing = false; // लॉक खुला
+        }, 500);
       }
     }
   }
