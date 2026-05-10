@@ -1,31 +1,40 @@
 /*
 ========================================================
-🚀 DRISHTI AI — UNIVERSAL VOICE ENGINE
+🚀 DRISHTI AI — FINAL UNIVERSAL VOICE ENGINE
 ========================================================
 
-✅ Android Chrome Stable
-✅ iPhone Safari Stable
-✅ iPad Safari Stable
+✅ Android Chrome Supported
+✅ iPhone Safari Supported
+✅ iPad Safari Supported
 ✅ Hindi + Hinglish + English
-✅ No Duplicate Transcript
-✅ No Double AI Response
-✅ Ghost Mic Fixed
-✅ Silence Auto Send
-✅ Smart Restart Protection
-✅ Auto Audio Unlock
-✅ Mobile Optimized
-✅ Dynamic Fonts + Cyber UI
-✅ Production Style Architecture
+✅ No Duplicate Text
+✅ No Double Response
+✅ Auto Silence Send
+✅ Stable Mic Handling
+✅ Real Mobile Fixes
+✅ Dynamic Styling
+✅ Easy Copy-Paste
 
-IMPORTANT:
-Do NOT modify index.html
-Just include this voice.js
+--------------------------------------------------------
+REQUIRED HTML IDS
+--------------------------------------------------------
 
-Required IDs:
-- #micBtn
-- #messageInput
+<button id="micBtn"></button>
 
-window.send() must exist
+<textarea id="messageInput"></textarea>
+
+OR
+
+<input id="messageInput" />
+
+--------------------------------------------------------
+IMPORTANT
+--------------------------------------------------------
+
+1. Website MUST use HTTPS
+2. Safari/iPhone will ask mic permission
+3. Do NOT run using file://
+4. Paste ONLY in voice.js
 
 ========================================================
 */
@@ -33,15 +42,12 @@ window.send() must exist
 (() => {
 
   // ====================================================
-  // PREVENT DOUBLE LOAD
+  // PREVENT MULTIPLE LOADS
   // ====================================================
 
-  if (window.DRISHTI_VOICE_LOADED) {
-    console.log("⚠️ Voice Engine Already Loaded");
-    return;
-  }
+  if (window.__DRISHTI_LOADED__) return;
 
-  window.DRISHTI_VOICE_LOADED = true;
+  window.__DRISHTI_LOADED__ = true;
 
   // ====================================================
   // GOOGLE FONTS
@@ -52,27 +58,19 @@ window.send() must exist
   font.rel = "stylesheet";
 
   font.href =
-    "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Audiowide&family=Exo+2:wght@400;500;600&display=swap";
+    "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@400;500;600&family=Audiowide&family=Exo+2:wght@400;500;600&display=swap";
 
   document.head.appendChild(font);
 
   // ====================================================
-  // CYBER STYLES
+  // STYLES
   // ====================================================
 
   const style = document.createElement("style");
 
   style.innerHTML = `
 
-    :root{
-      --drishti-primary:#00F0FF;
-      --drishti-bg:#050816;
-      --drishti-text:#ffffff;
-    }
-
     body{
-      background:var(--drishti-bg);
-      color:var(--drishti-text);
       font-family:'Rajdhani',sans-serif;
       -webkit-tap-highlight-color:transparent;
     }
@@ -95,8 +93,8 @@ window.send() must exist
       transform:scale(1.08);
       transition:0.25s ease;
       box-shadow:
-        0 0 12px var(--drishti-primary),
-        0 0 30px var(--drishti-primary);
+      0 0 12px cyan,
+      0 0 28px cyan;
     }
 
   `;
@@ -104,7 +102,54 @@ window.send() must exist
   document.head.appendChild(style);
 
   // ====================================================
-  // AUDIO UNLOCK (iOS FIX)
+  // SPEECH SUPPORT
+  // ====================================================
+
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+
+    alert(
+      "Speech Recognition Not Supported"
+    );
+
+    return;
+  }
+
+  // ====================================================
+  // ELEMENTS
+  // ====================================================
+
+  const micBtn =
+    document.getElementById("micBtn");
+
+  const inputBox =
+    document.getElementById("messageInput") ||
+    document.querySelector("textarea") ||
+    document.querySelector("input");
+
+  if (!micBtn) {
+
+    console.error(
+      "❌ micBtn not found"
+    );
+
+    return;
+  }
+
+  if (!inputBox) {
+
+    console.error(
+      "❌ messageInput not found"
+    );
+
+    return;
+  }
+
+  // ====================================================
+  // AUDIO UNLOCK FOR IOS
   // ====================================================
 
   let audioUnlocked = false;
@@ -115,13 +160,14 @@ window.send() must exist
 
     try {
 
-      const AudioCtx =
+      const AudioContextClass =
         window.AudioContext ||
         window.webkitAudioContext;
 
-      if (!AudioCtx) return;
+      if (!AudioContextClass) return;
 
-      const audioContext = new AudioCtx();
+      const audioContext =
+        new AudioContextClass();
 
       if (
         audioContext.state === "suspended"
@@ -139,11 +185,11 @@ window.send() must exist
         "Audio Unlock Error:",
         err
       );
-
     }
   }
 
-  ["touchstart", "click"].forEach(evt => {
+  // iOS Safari fix
+  ["click", "touchstart"].forEach(evt => {
 
     document.addEventListener(
       evt,
@@ -154,122 +200,83 @@ window.send() must exist
   });
 
   // ====================================================
-  // SPEECH RECOGNITION
+  // RECOGNITION INSTANCE
   // ====================================================
-
-  const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-
-    console.error(
-      "❌ Speech Recognition Unsupported"
-    );
-
-    alert(
-      "Speech Recognition is not supported on this browser."
-    );
-
-    return;
-  }
 
   const recognition =
     new SpeechRecognition();
 
-  // ====================================================
-  // UNIVERSAL CONFIG
-  // ====================================================
-
   recognition.lang = "hi-IN";
 
-  recognition.continuous = true;
+  recognition.continuous = false;
 
   recognition.interimResults = true;
 
   recognition.maxAlternatives = 1;
 
   // ====================================================
-  // ELEMENTS
-  // ====================================================
-
-  const inputBox =
-    document.getElementById("messageInput") ||
-    document.querySelector("textarea") ||
-    document.querySelector("input");
-
-  const micButton =
-    document.getElementById("micBtn");
-
-  // ====================================================
   // STATES
   // ====================================================
 
-  let isListening = false;
+  let listening = false;
 
   let silenceTimer = null;
 
+  let finalTranscript = "";
+
   let alreadySent = false;
 
-  let currentTranscript = "";
-
-  let manualStop = false;
-
-  let lastSpeechTime = 0;
-
   // ====================================================
-  // START LISTENING
+  // START MIC
   // ====================================================
 
-  async function startListening() {
+  async function startMic() {
 
-    if (isListening) return;
-
-    await unlockAudio();
-
-    alreadySent = false;
-
-    currentTranscript = "";
-
-    manualStop = false;
-
-    clearTimeout(silenceTimer);
+    if (listening) return;
 
     try {
 
+      // FORCE MIC PERMISSION
+      await navigator.mediaDevices.getUserMedia({
+        audio: true
+      });
+
+      await unlockAudio();
+
+      finalTranscript = "";
+
+      alreadySent = false;
+
       recognition.start();
 
-      isListening = true;
+      listening = true;
 
-      if (micButton) {
-        micButton.classList.add(
-          "listening"
-        );
-      }
-
-      console.log(
-        "🎤 DRISHTI Listening..."
+      micBtn.classList.add(
+        "listening"
       );
+
+      console.log("🎤 Listening Started");
 
     } catch (err) {
 
       console.error(
-        "Recognition Start Error:",
+        "Mic Start Error:",
         err
       );
 
+      alert(
+        "Microphone permission denied."
+      );
     }
   }
 
   // ====================================================
-  // STOP LISTENING
+  // STOP MIC
   // ====================================================
 
-  function stopListening() {
+  function stopMic() {
 
-    if (!isListening) return;
-
-    manualStop = true;
+    if (!listening) return;
 
     clearTimeout(silenceTimer);
 
@@ -280,19 +287,16 @@ window.send() must exist
     } catch (err) {
 
       console.error(
-        "Recognition Stop Error:",
+        "Stop Error:",
         err
       );
-
     }
 
-    isListening = false;
+    listening = false;
 
-    if (micButton) {
-      micButton.classList.remove(
-        "listening"
-      );
-    }
+    micBtn.classList.remove(
+      "listening"
+    );
 
     console.log("🛑 Mic Stopped");
   }
@@ -301,17 +305,16 @@ window.send() must exist
   // SILENCE DETECTION
   // ====================================================
 
-  function resetSilenceTimer() {
+  function startSilenceTimer() {
 
     clearTimeout(silenceTimer);
 
     silenceTimer = setTimeout(() => {
 
-      stopListening();
+      stopMic();
 
       if (
         alreadySent ||
-        !inputBox ||
         !inputBox.value.trim()
       ) {
         return;
@@ -321,11 +324,12 @@ window.send() must exist
 
       // AUTO SEND
       if (
-        typeof window.send === "function"
+        typeof window.send ===
+        "function"
       ) {
 
         console.log(
-          "📤 Auto Sending..."
+          "📤 Auto Sending"
         );
 
         window.send();
@@ -335,12 +339,12 @@ window.send() must exist
   }
 
   // ====================================================
-  // MAIN SPEECH ENGINE
+  // RESULT HANDLER
   // ====================================================
 
   recognition.onresult = (event) => {
 
-    let transcript = "";
+    let text = "";
 
     for (
       let i = event.resultIndex;
@@ -348,53 +352,35 @@ window.send() must exist
       i++
     ) {
 
-      const result =
-        event.results[i];
-
-      transcript +=
-        result[0].transcript;
+      text +=
+        event.results[i][0].transcript;
     }
 
-    transcript = transcript.trim();
+    text = text.trim();
 
     // EMPTY BLOCK
-    if (!transcript) return;
+    if (!text) return;
 
-    // DUPLICATE PREVENTION
+    // DUPLICATE BLOCK
     if (
-      transcript.toLowerCase() ===
-      currentTranscript.toLowerCase()
+      text.toLowerCase() ===
+      finalTranscript.toLowerCase()
     ) {
       return;
     }
 
-    // RAPID DUPLICATE BLOCK
-    const now = Date.now();
-
-    if (
-      now - lastSpeechTime < 400 &&
-      transcript === currentTranscript
-    ) {
-      return;
-    }
-
-    lastSpeechTime = now;
-
-    currentTranscript = transcript;
+    finalTranscript = text;
 
     // UPDATE INPUT
-    if (inputBox) {
+    inputBox.value = text;
 
-      inputBox.value = transcript;
+    inputBox.dispatchEvent(
+      new Event("input", {
+        bubbles: true
+      })
+    );
 
-      inputBox.dispatchEvent(
-        new Event("input", {
-          bubbles: true
-        })
-      );
-    }
-
-    resetSilenceTimer();
+    startSilenceTimer();
   };
 
   // ====================================================
@@ -404,101 +390,50 @@ window.send() must exist
   recognition.onerror = (event) => {
 
     console.error(
-      "Recognition Error:",
+      "Speech Recognition Error:",
       event.error
     );
 
-    // SAFARI RANDOM ERRORS IGNORE
-    if (
-      event.error === "no-speech" ||
-      event.error === "aborted"
-    ) {
-      return;
-    }
-
-    stopListening();
+    stopMic();
   };
 
   // ====================================================
-  // ON END
+  // END EVENT
   // ====================================================
 
   recognition.onend = () => {
 
-    isListening = false;
+    listening = false;
 
-    if (micButton) {
-      micButton.classList.remove(
-        "listening"
-      );
-    }
+    micBtn.classList.remove(
+      "listening"
+    );
 
     console.log(
       "🎤 Recognition Ended"
     );
-
-    // AUTO RESTART PROTECTION
-    if (!manualStop) {
-
-      console.log(
-        "🔄 Safe Restart..."
-      );
-
-      setTimeout(() => {
-
-        if (!isListening) {
-
-          try {
-
-            recognition.start();
-
-            isListening = true;
-
-            if (micButton) {
-              micButton.classList.add(
-                "listening"
-              );
-            }
-
-          } catch (err) {
-
-            console.error(
-              "Restart Failed:",
-              err
-            );
-
-          }
-
-        }
-
-      }, 250);
-
-    }
   };
 
   // ====================================================
-  // BUTTON BINDING
+  // BUTTON CLICK
   // ====================================================
 
-  if (micButton) {
+  micBtn.addEventListener(
+    "click",
+    async () => {
 
-    micButton.addEventListener(
-      "click",
-      async () => {
+      if (listening) {
 
-        if (isListening) {
+        stopMic();
 
-          stopListening();
+      } else {
 
-        } else {
-
-          await startListening();
-
-        }
+        await startMic();
 
       }
-    );
-  }
+
+    }
+  );
 
   // ====================================================
   // GLOBAL API
@@ -506,18 +441,16 @@ window.send() must exist
 
   window.DRISHTI_VOICE = {
 
-    start: startListening,
+    start: startMic,
 
-    stop: stopListening,
+    stop: stopMic,
 
-    recognition,
-
-    version: "DRISHTI UNIVERSAL 1.0"
+    recognition
 
   };
 
   console.log(
-    "🚀 DRISHTI AI Universal Voice Engine Loaded"
+    "🚀 DRISHTI AI Voice Engine Ready"
   );
 
 })();
