@@ -1,46 +1,80 @@
 /*
-========================================
-🚀 DRISHTI AI - ULTIMATE VOICE ENGINE
-========================================
-Features:
-✅ Hindi + Hinglish Support
-✅ Duplicate Prevention
-✅ Ghost Mic Fix
+========================================================
+🚀 DRISHTI AI — UNIVERSAL VOICE ENGINE
+========================================================
+
+✅ Android Chrome Stable
+✅ iPhone Safari Stable
+✅ iPad Safari Stable
+✅ Hindi + Hinglish + English
+✅ No Duplicate Transcript
+✅ No Double AI Response
+✅ Ghost Mic Fixed
 ✅ Silence Auto Send
-✅ iOS Safari Stable
-✅ Smart Transcript Engine
-✅ Dynamic Fonts + Styles
-✅ Hard Kill Recognition
-========================================
+✅ Smart Restart Protection
+✅ Auto Audio Unlock
+✅ Mobile Optimized
+✅ Dynamic Fonts + Cyber UI
+✅ Production Style Architecture
+
+IMPORTANT:
+Do NOT modify index.html
+Just include this voice.js
+
+Required IDs:
+- #micBtn
+- #messageInput
+
+window.send() must exist
+
+========================================================
 */
 
 (() => {
 
-  // ====================================
-  // GOOGLE FONTS INJECTION
-  // ====================================
+  // ====================================================
+  // PREVENT DOUBLE LOAD
+  // ====================================================
+
+  if (window.DRISHTI_VOICE_LOADED) {
+    console.log("⚠️ Voice Engine Already Loaded");
+    return;
+  }
+
+  window.DRISHTI_VOICE_LOADED = true;
+
+  // ====================================================
+  // GOOGLE FONTS
+  // ====================================================
 
   const font = document.createElement("link");
 
   font.rel = "stylesheet";
 
   font.href =
-    "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;500;600&family=Audiowide&family=Exo+2:wght@400;500;600&display=swap";
+    "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Audiowide&family=Exo+2:wght@400;500;600&display=swap";
 
   document.head.appendChild(font);
 
-  // ====================================
-  // DRISHTI CYBER STYLES
-  // ====================================
+  // ====================================================
+  // CYBER STYLES
+  // ====================================================
 
   const style = document.createElement("style");
 
   style.innerHTML = `
-  
+
+    :root{
+      --drishti-primary:#00F0FF;
+      --drishti-bg:#050816;
+      --drishti-text:#ffffff;
+    }
+
     body{
+      background:var(--drishti-bg);
+      color:var(--drishti-text);
       font-family:'Rajdhani',sans-serif;
-      background:#050816;
-      color:white;
+      -webkit-tap-highlight-color:transparent;
     }
 
     .ai-title,
@@ -57,16 +91,23 @@ Features:
       font-family:'Exo 2',sans-serif;
     }
 
+    #micBtn.listening{
+      transform:scale(1.08);
+      transition:0.25s ease;
+      box-shadow:
+        0 0 12px var(--drishti-primary),
+        0 0 30px var(--drishti-primary);
+    }
+
   `;
 
   document.head.appendChild(style);
 
-  // ====================================
-  // AUDIO CONTEXT FIX FOR iOS
-  // ====================================
+  // ====================================================
+  // AUDIO UNLOCK (iOS FIX)
+  // ====================================================
 
   let audioUnlocked = false;
-  let audioContext = null;
 
   async function unlockAudio() {
 
@@ -80,9 +121,11 @@ Features:
 
       if (!AudioCtx) return;
 
-      audioContext = new AudioCtx();
+      const audioContext = new AudioCtx();
 
-      if (audioContext.state === "suspended") {
+      if (
+        audioContext.state === "suspended"
+      ) {
         await audioContext.resume();
       }
 
@@ -92,24 +135,27 @@ Features:
 
     } catch (err) {
 
-      console.error("Audio Unlock Failed", err);
+      console.error(
+        "Audio Unlock Error:",
+        err
+      );
 
     }
   }
 
-  ["click", "touchstart"].forEach(event => {
+  ["touchstart", "click"].forEach(evt => {
 
     document.addEventListener(
-      event,
+      evt,
       unlockAudio,
       { once: true }
     );
 
   });
 
-  // ====================================
-  // SPEECH RECOGNITION SETUP
-  // ====================================
+  // ====================================================
+  // SPEECH RECOGNITION
+  // ====================================================
 
   const SpeechRecognition =
     window.SpeechRecognition ||
@@ -118,7 +164,11 @@ Features:
   if (!SpeechRecognition) {
 
     console.error(
-      "❌ Speech Recognition Not Supported"
+      "❌ Speech Recognition Unsupported"
+    );
+
+    alert(
+      "Speech Recognition is not supported on this browser."
     );
 
     return;
@@ -127,21 +177,21 @@ Features:
   const recognition =
     new SpeechRecognition();
 
-  // ====================================
-  // BEST CONFIG
-  // ====================================
-
-  recognition.continuous = false;
-
-  recognition.interimResults = true;
+  // ====================================================
+  // UNIVERSAL CONFIG
+  // ====================================================
 
   recognition.lang = "hi-IN";
 
+  recognition.continuous = true;
+
+  recognition.interimResults = true;
+
   recognition.maxAlternatives = 1;
 
-  // ====================================
-  // DOM ELEMENTS
-  // ====================================
+  // ====================================================
+  // ELEMENTS
+  // ====================================================
 
   const inputBox =
     document.getElementById("messageInput") ||
@@ -151,9 +201,9 @@ Features:
   const micButton =
     document.getElementById("micBtn");
 
-  // ====================================
-  // ENGINE STATES
-  // ====================================
+  // ====================================================
+  // STATES
+  // ====================================================
 
   let isListening = false;
 
@@ -161,11 +211,15 @@ Features:
 
   let alreadySent = false;
 
-  let lastTranscript = "";
+  let currentTranscript = "";
 
-  // ====================================
+  let manualStop = false;
+
+  let lastSpeechTime = 0;
+
+  // ====================================================
   // START LISTENING
-  // ====================================
+  // ====================================================
 
   async function startListening() {
 
@@ -175,7 +229,9 @@ Features:
 
     alreadySent = false;
 
-    lastTranscript = "";
+    currentTranscript = "";
+
+    manualStop = false;
 
     clearTimeout(silenceTimer);
 
@@ -185,62 +241,71 @@ Features:
 
       isListening = true;
 
-      console.log("🎤 Listening Started");
+      if (micButton) {
+        micButton.classList.add(
+          "listening"
+        );
+      }
+
+      console.log(
+        "🎤 DRISHTI Listening..."
+      );
 
     } catch (err) {
 
       console.error(
-        "Recognition Start Error",
+        "Recognition Start Error:",
         err
       );
 
     }
   }
 
-  // ====================================
-  // HARD STOP FIX
-  // ====================================
+  // ====================================================
+  // STOP LISTENING
+  // ====================================================
 
   function stopListening() {
 
     if (!isListening) return;
 
+    manualStop = true;
+
     clearTimeout(silenceTimer);
 
     try {
 
-      // GHOST MIC FIX
-      recognition.onend = null;
-
-      recognition.abort();
-
       recognition.stop();
-
-      isListening = false;
-
-      console.log("🛑 Mic Stopped");
 
     } catch (err) {
 
       console.error(
-        "Recognition Stop Error",
+        "Recognition Stop Error:",
         err
       );
 
     }
+
+    isListening = false;
+
+    if (micButton) {
+      micButton.classList.remove(
+        "listening"
+      );
+    }
+
+    console.log("🛑 Mic Stopped");
   }
 
-  // ====================================
-  // AUTO SEND AFTER SILENCE
-  // ====================================
+  // ====================================================
+  // SILENCE DETECTION
+  // ====================================================
 
   function resetSilenceTimer() {
 
     clearTimeout(silenceTimer);
 
     silenceTimer = setTimeout(() => {
-
-      console.log("⏳ Silence Detected");
 
       stopListening();
 
@@ -254,21 +319,24 @@ Features:
 
       alreadySent = true;
 
-      // SEND MESSAGE
-      if (typeof window.send === "function") {
+      // AUTO SEND
+      if (
+        typeof window.send === "function"
+      ) {
+
+        console.log(
+          "📤 Auto Sending..."
+        );
 
         window.send();
-
-        console.log("📤 Message Sent");
-
       }
 
     }, 1600);
   }
 
-  // ====================================
-  // MAIN VOICE ENGINE
-  // ====================================
+  // ====================================================
+  // MAIN SPEECH ENGINE
+  // ====================================================
 
   recognition.onresult = (event) => {
 
@@ -280,22 +348,39 @@ Features:
       i++
     ) {
 
-      transcript +=
-        event.results[i][0].transcript;
+      const result =
+        event.results[i];
 
+      transcript +=
+        result[0].transcript;
     }
 
     transcript = transcript.trim();
 
-    // DUPLICATE FIX
+    // EMPTY BLOCK
+    if (!transcript) return;
+
+    // DUPLICATE PREVENTION
     if (
       transcript.toLowerCase() ===
-      lastTranscript.toLowerCase()
+      currentTranscript.toLowerCase()
     ) {
       return;
     }
 
-    lastTranscript = transcript;
+    // RAPID DUPLICATE BLOCK
+    const now = Date.now();
+
+    if (
+      now - lastSpeechTime < 400 &&
+      transcript === currentTranscript
+    ) {
+      return;
+    }
+
+    lastSpeechTime = now;
+
+    currentTranscript = transcript;
 
     // UPDATE INPUT
     if (inputBox) {
@@ -307,46 +392,99 @@ Features:
           bubbles: true
         })
       );
-
     }
 
     resetSilenceTimer();
   };
 
-  // ====================================
-  // ERROR HANDLING
-  // ====================================
+  // ====================================================
+  // ERROR HANDLER
+  // ====================================================
 
   recognition.onerror = (event) => {
 
     console.error(
-      "Speech Recognition Error:",
+      "Recognition Error:",
       event.error
     );
+
+    // SAFARI RANDOM ERRORS IGNORE
+    if (
+      event.error === "no-speech" ||
+      event.error === "aborted"
+    ) {
+      return;
+    }
 
     stopListening();
   };
 
-  // ====================================
-  // SAFE ON END
-  // ====================================
+  // ====================================================
+  // ON END
+  // ====================================================
 
   recognition.onend = () => {
 
     isListening = false;
 
-    console.log("🎤 Recognition Ended");
+    if (micButton) {
+      micButton.classList.remove(
+        "listening"
+      );
+    }
+
+    console.log(
+      "🎤 Recognition Ended"
+    );
+
+    // AUTO RESTART PROTECTION
+    if (!manualStop) {
+
+      console.log(
+        "🔄 Safe Restart..."
+      );
+
+      setTimeout(() => {
+
+        if (!isListening) {
+
+          try {
+
+            recognition.start();
+
+            isListening = true;
+
+            if (micButton) {
+              micButton.classList.add(
+                "listening"
+              );
+            }
+
+          } catch (err) {
+
+            console.error(
+              "Restart Failed:",
+              err
+            );
+
+          }
+
+        }
+
+      }, 250);
+
+    }
   };
 
-  // ====================================
-  // MIC BUTTON BINDING
-  // ====================================
+  // ====================================================
+  // BUTTON BINDING
+  // ====================================================
 
   if (micButton) {
 
     micButton.addEventListener(
       "click",
-      () => {
+      async () => {
 
         if (isListening) {
 
@@ -354,7 +492,7 @@ Features:
 
         } else {
 
-          startListening();
+          await startListening();
 
         }
 
@@ -362,9 +500,9 @@ Features:
     );
   }
 
-  // ====================================
-  // GLOBAL ACCESS
-  // ====================================
+  // ====================================================
+  // GLOBAL API
+  // ====================================================
 
   window.DRISHTI_VOICE = {
 
@@ -372,12 +510,14 @@ Features:
 
     stop: stopListening,
 
-    recognition
+    recognition,
+
+    version: "DRISHTI UNIVERSAL 1.0"
 
   };
 
   console.log(
-    "🚀 DRISHTI AI Voice Engine Ready"
+    "🚀 DRISHTI AI Universal Voice Engine Loaded"
   );
 
 })();
