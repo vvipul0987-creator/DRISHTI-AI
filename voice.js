@@ -1,34 +1,32 @@
 /**
- * DRISHTI OMNI-CORE v3.0
- * Pure Innovation | Zero-Echo | Auto-Kill Switch
+ * DRISHTI OMNI-CORE v4.0
+ * Pure Precision | Single-Message Lock | Auto-Kill Switch
  */
 
 window.DrishtiVoice = {
   isListening: false,
   recognition: null,
   silenceTimer: null,
+  isSending: false, // NEW: दोबारा सेंड होने से रोकने के लिए लॉक
 
-  // 1. INNOVATION: Futuristic UI Injection (No HTML change)
   injectAesthetics: function() {
-    if (document.getElementById('drishti-v3-css')) return;
+    if (document.getElementById('drishti-v4-css')) return;
     const link = document.createElement('link');
     link.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500;700&display=swap';
     link.rel = 'stylesheet';
     document.head.appendChild(link);
 
     const style = document.createElement('style');
-    style.id = 'drishti-v3-css';
+    style.id = 'drishti-v4-css';
     style.innerHTML = `
       body { font-family: 'Rajdhani', sans-serif !important; }
-      #mic { font-family: 'Orbitron', sans-serif !important; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+      #mic { font-family: 'Orbitron', sans-serif !important; transition: 0.3s ease; border-radius: 50%; }
       .mic-on { 
-        background: radial-gradient(circle, #ff0055, #000) !important; 
-        box-shadow: 0 0 25px #ff0055 !important;
+        background: #ff0055 !important; 
+        box-shadow: 0 0 20px #ff0055;
         transform: scale(1.1);
-        animation: pulse-ring 1.5s infinite;
       }
-      @keyframes pulse-ring { 0% { opacity: 0.7; } 100% { opacity: 1; } }
-      #sbar { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; color: #ff0055; }
+      #sbar { font-family: 'Orbitron', sans-serif; color: #ff0055; font-size: 12px; }
     `;
     document.head.appendChild(style);
   },
@@ -37,10 +35,10 @@ window.DrishtiVoice = {
     this.injectAesthetics();
     const mic = document.getElementById("mic");
     if(mic) {
-      mic.replaceWith(mic.cloneNode(true)); // पुरानी गड़बड़ियाँ खत्म
+      mic.replaceWith(mic.cloneNode(true)); 
       document.getElementById("mic").addEventListener("click", () => this.toggle());
     }
-    console.log("🌌 DRISHTI v3.0 ACTIVATED");
+    console.log("🌌 DRISHTI v4.0: One-Chat Logic Active");
   },
 
   toggle: function() {
@@ -51,9 +49,10 @@ window.DrishtiVoice = {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SR) return;
 
-    // iOS Safari Fix
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    // Reset State
+    this.isSending = false; 
+    const inp = document.getElementById("inp");
+    if(inp) inp.value = ""; // शुरुआत में ही साफ़
 
     this.recognition = new SR();
     this.recognition.lang = "hi-IN";
@@ -63,10 +62,12 @@ window.DrishtiVoice = {
     this.recognition.onstart = () => {
       this.isListening = true;
       document.getElementById("mic").classList.add("mic-on");
-      document.getElementById("sbar").textContent = "AI LISTENING...";
+      document.getElementById("sbar").textContent = "LISTENING...";
     };
 
     this.recognition.onresult = (e) => {
+      if(this.isSending) return; // अगर सेंड हो रहा है तो कुछ मत करो
+
       let current = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         current += e.results[i][0].transcript;
@@ -74,11 +75,10 @@ window.DrishtiVoice = {
       const inp = document.getElementById("inp");
       if(inp) inp.value = current;
 
-      // 2. INNOVATION: Smart Silence (1.5s शांति = सेंड)
       clearTimeout(this.silenceTimer);
       this.silenceTimer = setTimeout(() => {
         if(current.trim().length > 0) this.stopAndSend(true);
-      }, 1500);
+      }, 1600);
     };
 
     this.recognition.onend = () => {
@@ -88,13 +88,14 @@ window.DrishtiVoice = {
     this.recognition.start();
   },
 
-  // 3. INNOVATION: The Hard Kill-Switch
   stopAndSend: function(shouldSend) {
+    if(this.isSending) return; // दोबारा सेंड होने से बचाओ
+    
     this.isListening = false;
     clearTimeout(this.silenceTimer);
 
     if(this.recognition) {
-      this.recognition.onend = null; // स्विच पूरी तरह ऑफ
+      this.recognition.onend = null; 
       this.recognition.stop();
     }
 
@@ -102,13 +103,17 @@ window.DrishtiVoice = {
     document.getElementById("sbar").textContent = "STANDBY";
 
     if(shouldSend) {
-      setTimeout(() => {
-        const inp = document.getElementById("inp");
-        if(window.send && inp.value.trim() !== "") {
-          window.send();
-          inp.value = ""; // सेंड के बाद स्क्रीन साफ़
-        }
-      }, 100);
+      const inp = document.getElementById("inp");
+      if(window.send && inp.value.trim() !== "") {
+        this.isSending = true; // लॉक लगाओ
+        window.send();
+        
+        // सेंड करने के तुरंत बाद कचरा साफ़
+        setTimeout(() => {
+          inp.value = ""; 
+          this.isSending = false; // अगले मैसेज के लिए लॉक खोलो
+        }, 300);
+      }
     }
   }
 };
