@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DRISHTI AI | Advanced Vision</title>
+    <style>
+        :root { --neon: #00f2ff; --bg: #050505; --card: #111; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background-color: var(--bg); color: white; 
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; overflow: hidden;
+        }
+
+        .container {
+            width: 92%; max-width: 420px; padding: 25px; border-radius: 35px;
+            background: linear-gradient(145deg, #151515, #000);
+            border: 1px solid rgba(0, 242, 255, 0.2);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 20px rgba(0, 242, 255, 0.05);
+            text-align: center; position: relative;
+        }
+
+        h1 { 
+            font-size: 2.2rem; letter-spacing: 8px; color: var(--neon);
+            text-shadow: 0 0 15px var(--neon); margin-bottom: 5px; font-weight: 800;
+        }
+
+        .status-bar { font-size: 0.65rem; letter-spacing: 3px; opacity: 0.5; margin-bottom: 20px; color: var(--neon); }
+
+        .vision-box {
+            position: relative; width: 100%; aspect-ratio: 1/1;
+            background: #000; border-radius: 25px; overflow: hidden;
+            border: 2px solid #222; margin-bottom: 25px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,1);
+        }
+
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        .scan-line {
+            position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+            background: var(--neon); box-shadow: 0 0 15px var(--neon);
+            animation: scan 2.5s ease-in-out infinite; display: none; z-index: 10;
+        }
+
+        @keyframes scan {
+            0%, 100% { top: 5%; opacity: 0.2; }
+            50% { top: 95%; opacity: 1; }
+        }
+
+        #output { 
+            background: rgba(255,255,255,0.03); padding: 18px; border-radius: 15px; 
+            min-height: 80px; margin-bottom: 20px; font-size: 0.95rem; 
+            line-height: 1.5; border-left: 4px solid var(--neon); text-align: left;
+            color: #ddd; overflow-y: auto; max-height: 120px;
+        }
+
+        .btn {
+            background: transparent; color: var(--neon);
+            border: 2px solid var(--neon); padding: 16px;
+            border-radius: 50px; font-size: 1rem; font-weight: bold;
+            cursor: pointer; transition: 0.4s; width: 100%;
+            text-transform: uppercase; letter-spacing: 3px;
+        }
+
+        .btn:hover { background: var(--neon); color: #000; box-shadow: 0 0 30px var(--neon); }
+        .btn:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>DRISHTI</h1>
+        <p class="status-bar">Neural Vision Engine v1.5</p>
+
+        <div class="vision-box">
+            <div id="scanner" class="scan-line"></div>
+            <video id="view" autoplay playsinline></video>
+        </div>
+
+        <div id="output">सिस्टम तैयार है। शुरू करने के लिए "सक्रिय करें" दबाएं।</div>
+
+        <button class="btn" id="mainBtn">सक्रिय करें</button>
+    </div>
+
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script type="module">
+        const API_KEY = "AIzaSyDiFQ7TSHMBFMesqpnB1jd25eP4qvkb-OY"; 
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+
+        const video = document.getElementById('view');
+        const mainBtn = document.getElementById('mainBtn');
+        const output = document.getElementById('output');
+        const scanner = document.getElementById('scanner');
+        const canvas = document.getElementById('canvas');
+
+        let isActive = false;
+
+        mainBtn.onclick = async () => {
+            if (!isActive) {
+                // कैमरा शुरू करें
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: "environment" } 
+                    });
+                    video.srcObject = stream;
+                    scanner.style.display = 'block';
+                    mainBtn.innerHTML = "पहचानें (Analyze)";
+                    output.innerHTML = "दृष्टि सक्रिय है। किसी चीज़ के सामने कैमरा ले जाकर 'पहचानें' दबाएं।";
+                    isActive = true;
+                } catch (err) {
+                    output.innerHTML = "कैमरा एरर: कृपया परमिशन दें।";
+                }
+            } else {
+                // विश्लेषण (Analyze) करें
+                analyzeImage();
+            }
+        };
+
+        async function analyzeImage() {
+            output.innerHTML = "विश्लेषण किया जा रहा है... थोड़ा इंतज़ार करें।";
+            
+            // फ्रेम कैप्चर
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: "आप एक विजुअल असिस्टेंट हैं। इस तस्वीर को देखें और बताएं कि इसमें क्या है। बहुत कम शब्दों में और सरल हिंदी में जवाब दें।" },
+                        { inline_data: { mime_type: "image/jpeg", data: base64Image } }
+                    ]
+                }]
+            };
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                const aiResponse = data.candidates[0].content.parts[0].text;
+                
+                output.innerHTML = aiResponse;
+
+                // आवाज़ (Voice Output)
+                const speech = new SpeechSynthesisUtterance(aiResponse);
+                speech.lang = 'hi-IN';
+                window.speechSynthesis.speak(speech);
+
+            } catch (err) {
+                output.innerHTML = "सर्वर से संपर्क नहीं हो पाया। कृपया दोबारा कोशिश करें।";
+            }
+        }
+    </script>
+</body>
+</html>
