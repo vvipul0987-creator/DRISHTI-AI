@@ -1,288 +1,116 @@
-// voice.js — DRISHTI Ultimate Voice System v2.0
-// iPhone + iPad + Android + Safari + Chrome — Sab Support
+/**
+ * DRISHTI OMNI-CORE v3.0
+ * Pure Innovation | Zero-Echo | Auto-Kill Switch
+ */
 
 window.DrishtiVoice = {
   isListening: false,
   recognition: null,
-  lastInputWasVoice: false,
-  retryCount: 0,
-  maxRetry: 3,
+  silenceTimer: null,
 
-  // Browser detect
-  browser: {
-    isSafari: /^((?!chrome|android).)*safari/i.test(navigator.userAgent),
-    isChrome: /chrome/i.test(navigator.userAgent),
-    isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
-    isAndroid: /android/i.test(navigator.userAgent),
+  // 1. INNOVATION: Futuristic UI Injection (No HTML change)
+  injectAesthetics: function() {
+    if (document.getElementById('drishti-v3-css')) return;
+    const link = document.createElement('link');
+    link.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500;700&display=swap';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+
+    const style = document.createElement('style');
+    style.id = 'drishti-v3-css';
+    style.innerHTML = `
+      body { font-family: 'Rajdhani', sans-serif !important; }
+      #mic { font-family: 'Orbitron', sans-serif !important; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+      .mic-on { 
+        background: radial-gradient(circle, #ff0055, #000) !important; 
+        box-shadow: 0 0 25px #ff0055 !important;
+        transform: scale(1.1);
+        animation: pulse-ring 1.5s infinite;
+      }
+      @keyframes pulse-ring { 0% { opacity: 0.7; } 100% { opacity: 1; } }
+      #sbar { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; color: #ff0055; }
+    `;
+    document.head.appendChild(style);
   },
 
   init: function() {
+    this.injectAesthetics();
     const mic = document.getElementById("mic");
     if(mic) {
-      mic.removeAttribute("onclick");
-      mic.addEventListener("click", () => this.toggle());
-      mic.addEventListener("touchstart", (e) => {
-        e.preventDefault();
-        this.toggle();
-      }, { passive: false });
+      mic.replaceWith(mic.cloneNode(true)); // पुरानी गड़बड़ियाँ खत्म
+      document.getElementById("mic").addEventListener("click", () => this.toggle());
     }
-
-    // iOS ke liye special handling
-    if(this.browser.isIOS) {
-      document.addEventListener("touchend", () => {
-        if(window.speechSynthesis) {
-          speechSynthesis.resume();
-        }
-      }, { once: true });
-    }
-
-    this.setupHindiKeyboard();
-    console.log("✅ DRISHTI Voice Ready!", this.browser);
-  },
-
-  // Hindi keyboard shortcut
-  setupHindiKeyboard: function() {
-    const inp = document.getElementById("inp");
-    if(!inp) return;
-    inp.addEventListener("keydown", () => {
-      this.lastInputWasVoice = false;
-    });
+    console.log("🌌 DRISHTI v3.0 ACTIVATED");
   },
 
   toggle: function() {
-    if(this.isListening) {
-      this.stop();
-    } else {
-      this.start();
-    }
-  },
-
-  getLang: function() {
-    // Language system se milega — default Hindi
-    if(window.DrishtiLang) {
-      return window.DrishtiLang.current === "english" ? "en-US" : "hi-IN";
-    }
-    return "hi-IN";
+    this.isListening ? this.stopAndSend(true) : this.start();
   },
 
   start: function() {
-    // Browser support check
-    const SR = window.SpeechRecognition ||
-               window.webkitSpeechRecognition ||
-               window.mozSpeechRecognition ||
-               window.msSpeechRecognition;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR) return;
 
-    if(!SR) {
-      this.showError("Aapka browser voice support nahi karta. Chrome ya Safari use karo!");
-      return;
-    }
+    // iOS Safari Fix
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
 
-    // iOS Safari special permission
-    if(this.browser.isIOS && this.browser.isSafari) {
-      this.startIOSSafari(SR);
-    } else {
-      this.startNormal(SR);
-    }
-  },
-
-  startIOSSafari: function(SR) {
-    // iOS Safari ke liye special setup
     this.recognition = new SR();
-    this.recognition.lang = this.getLang();
-    this.recognition.continuous = false;
-    this.recognition.interimResults = false;
-    this.recognition.maxAlternatives = 3; // Multiple alternatives for better Hindi
-
-    this.setupEvents();
-
-    try {
-      this.recognition.start();
-      this.setListening(true);
-    } catch(e) {
-      if(e.name === "InvalidStateError") {
-        this.recognition.stop();
-        setTimeout(() => this.start(), 500);
-      }
-    }
-  },
-
-  startNormal: function(SR) {
-    this.recognition = new SR();
-    
-    // Hindi ke liye best settings
-    this.recognition.lang = this.getLang();
-    this.recognition.continuous = false;
-    this.recognition.interimResults = true; // Real-time text dikhao
-    this.recognition.maxAlternatives = 3;
-
-    this.setupEvents();
-
-    try {
-      this.recognition.start();
-      this.setListening(true);
-    } catch(e) {
-      console.error("Voice start error:", e);
-      this.reset();
-    }
-  },
-
-  setupEvents: function() {
-    // Interim results — real-time text
-    this.recognition.onresult = (e) => {
-      let interimText = "";
-      let finalText = "";
-
-      for(let i = e.resultIndex; i < e.results.length; i++) {
-        const text = e.results[i][0].transcript;
-        if(e.results[i].isFinal) {
-          finalText += text;
-        } else {
-          interimText += text;
-        }
-      }
-
-      // Real-time dikhaao
-      if(interimText) {
-        document.getElementById("inp").value = interimText;
-        document.getElementById("inp").style.color = "#A855F7";
-      }
-
-      // Final text
-      if(finalText) {
-        // Hindi text clean karo
-        const cleanText = this.cleanHindiText(finalText);
-        document.getElementById("inp").value = cleanText;
-        document.getElementById("inp").style.color = "#ffffff";
-        document.getElementById("sbar").textContent = `Suna: "${cleanText}" ✅`;
-        this.lastInputWasVoice = true;
-        this.retryCount = 0;
-
-        // Auto send
-        setTimeout(() => {
-          if(window.send) window.send();
-        }, 400);
-      }
-    };
+    this.recognition.lang = "hi-IN";
+    this.recognition.continuous = true;
+    this.recognition.interimResults = true;
 
     this.recognition.onstart = () => {
-      this.setListening(true);
-      document.getElementById("sbar").textContent = "🎙 Sun rahi hoon... Hindi ya English mein boliye!";
+      this.isListening = true;
+      document.getElementById("mic").classList.add("mic-on");
+      document.getElementById("sbar").textContent = "AI LISTENING...";
     };
 
-    this.recognition.onspeechstart = () => {
-      document.getElementById("sbar").textContent = "🎙 Awaaz aa rahi hai...";
-    };
-
-    this.recognition.onspeechend = () => {
-      document.getElementById("sbar").textContent = "⏳ Samajh rahi hoon...";
-    };
-
-    this.recognition.onerror = (e) => {
-      console.log("Voice error:", e.error);
-      switch(e.error) {
-        case "no-speech":
-          if(this.retryCount < this.maxRetry) {
-            this.retryCount++;
-            document.getElementById("sbar").textContent = `Kuch sunai nahi diya... dobara boliye (${this.retryCount}/${this.maxRetry})`;
-            setTimeout(() => this.start(), 1000);
-          } else {
-            this.retryCount = 0;
-            this.showError("Kuch sunai nahi diya. Mic ke paas boliye!");
-            this.reset();
-          }
-          break;
-        case "not-allowed":
-          this.showError("Mic ki permission chahiye!\niPad: Settings > Safari > Microphone\nAndroid: Chrome > Settings > Microphone");
-          this.reset();
-          break;
-        case "network":
-          this.showError("Internet check karo!");
-          this.reset();
-          break;
-        case "aborted":
-          this.reset();
-          break;
-        default:
-          this.showError("Voice error: " + e.error);
-          this.reset();
+    this.recognition.onresult = (e) => {
+      let current = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        current += e.results[i][0].transcript;
       }
+      const inp = document.getElementById("inp");
+      if(inp) inp.value = current;
+
+      // 2. INNOVATION: Smart Silence (1.5s शांति = सेंड)
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = setTimeout(() => {
+        if(current.trim().length > 0) this.stopAndSend(true);
+      }, 1500);
     };
 
     this.recognition.onend = () => {
-      if(this.isListening) {
-        this.reset();
-      }
+      if(this.isListening) this.recognition.start();
     };
+
+    this.recognition.start();
   },
 
-  // Hindi text clean karna
-  cleanHindiText: function(text) {
-    // Common English to Hindi corrections
-    const corrections = {
-      "hello": "hello",
-      "hi": "hi",
-      "python": "Python",
-      "javascript": "JavaScript",
-      "html": "HTML",
-      "css": "CSS",
-    };
-    
-    let cleaned = text.trim();
-    // Remove extra spaces
-    cleaned = cleaned.replace(/\s+/g, " ");
-    return cleaned;
-  },
-
-  setListening: function(state) {
-    this.isListening = state;
-    const mic = document.getElementById("mic");
-    if(!mic) return;
-
-    if(state) {
-      mic.style.background = "#DC2626";
-      mic.style.boxShadow = "0 0 20px #DC262688";
-      mic.innerHTML = "🔴";
-      mic.style.animation = "pulse 1s infinite";
-    } else {
-      mic.style.background = "#EC4899";
-      mic.style.boxShadow = "none";
-      mic.innerHTML = "🎙";
-      mic.style.animation = "none";
-    }
-  },
-
-  stop: function() {
-    if(this.recognition) {
-      try {
-        this.recognition.stop();
-      } catch(e) {}
-    }
-    this.reset();
-  },
-
-  reset: function() {
+  // 3. INNOVATION: The Hard Kill-Switch
+  stopAndSend: function(shouldSend) {
     this.isListening = false;
-    this.setListening(false);
-    const sbar = document.getElementById("sbar");
-    if(sbar) sbar.textContent = "Ready! 🎙 Mic tap karo ya type karo";
-  },
+    clearTimeout(this.silenceTimer);
 
-  showError: function(msg) {
-    const sbar = document.getElementById("sbar");
-    if(sbar) {
-      sbar.textContent = "⚠️ " + msg;
-      sbar.style.color = "#DC2626";
+    if(this.recognition) {
+      this.recognition.onend = null; // स्विच पूरी तरह ऑफ
+      this.recognition.stop();
+    }
+
+    document.getElementById("mic").classList.remove("mic-on");
+    document.getElementById("sbar").textContent = "STANDBY";
+
+    if(shouldSend) {
       setTimeout(() => {
-        sbar.style.color = "#4B5563";
-        sbar.textContent = "Ready!";
-      }, 3000);
+        const inp = document.getElementById("inp");
+        if(window.send && inp.value.trim() !== "") {
+          window.send();
+          inp.value = ""; // सेंड के बाद स्क्रीन साफ़
+        }
+      }, 100);
     }
   }
 };
 
-// Auto init when page loads
-if(document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => window.DrishtiVoice.init());
-} else {
-  window.DrishtiVoice.init();
-}
+document.addEventListener("DOMContentLoaded", () => window.DrishtiVoice.init());
