@@ -15,6 +15,8 @@ body{background:#08000F;color:#fff;font-family:'Segoe UI',Arial,sans-serif;min-h
 .mbtn{background:#1E0A3C;border:2px solid #4C1D95;color:#C4B5FD;padding:10px 18px;border-radius:50px;font-size:13px;cursor:pointer;font-weight:600;transition:all 0.2s}
 .mbtn.on{background:#7C3AED;border-color:#F59E0B;color:#fff;box-shadow:0 0 16px #7C3AED88}
 .chat{width:100%;max-width:760px;flex:1;padding:12px 14px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;height:calc(100vh - 260px)}
+.chat::-webkit-scrollbar{width:4px}
+.chat::-webkit-scrollbar-thumb{background:#4C1D95;border-radius:4px}
 .bubble{max-width:82%;padding:12px 16px;border-radius:18px;font-size:14px;line-height:1.6;animation:fadeUp 0.3s ease}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .bot{background:#1E0A3C;border-left:3px solid #F59E0B;align-self:flex-start}
@@ -43,22 +45,16 @@ body{background:#08000F;color:#fff;font-family:'Segoe UI',Arial,sans-serif;min-h
 </style>
 </head>
 <body>
-
 <div class="header">
-  <div class="logo-row">
-    <span class="eye">👁</span>
-    <span class="logo">DRISHTI</span>
-  </div>
+  <div class="logo-row"><span class="eye">👁</span><span class="logo">DRISHTI</span></div>
   <div class="tagline">Aapki Screen Dekhe · Hindi Mein Guide Kare · Hamesha Saath</div>
 </div>
-
 <div class="modes">
   <button class="mbtn on" onclick="setMode('chat',this)">💬 Baat Karo</button>
   <button class="mbtn" onclick="setMode('code',this)">💻 Coding</button>
   <button class="mbtn" onclick="setMode('web',this)">🌐 Website</button>
   <button class="mbtn" onclick="setMode('voice',this)">🎙 Voice</button>
 </div>
-
 <div class="chat" id="chat">
   <div class="bubble bot">
     <div class="bname">👁 DRISHTI</div>
@@ -74,7 +70,6 @@ body{background:#08000F;color:#fff;font-family:'Segoe UI',Arial,sans-serif;min-h
     </div>
   </div>
 </div>
-
 <div class="ibar">
   <div class="irow">
     <input class="tinp" id="inp" placeholder="Kuch bhi poochho Vipul..." onkeypress="if(event.key==='Enter')send()"/>
@@ -83,11 +78,12 @@ body{background:#08000F;color:#fff;font-family:'Segoe UI',Arial,sans-serif;min-h
   </div>
   <div class="sbar" id="sbar">Ready!</div>
 </div>
-
 <script>
-const API_KEY = "AIzaSyCIE8IpooidoxQuetrHQfGxqRWaM3uRzms";
-const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + API_KEY;
+const API_KEY = "gsk_EasyPNrYVqVh1J8il7IrWGdyb3FYULpe9S9yep0aY0UFqr7d2XSMHi";
+const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+
 let history = [], listening = false, recog = null;
+
 const SYSTEM = `Tu DRISHTI hai — Vipul ka personal AI assistant.
 Hindi aur Hinglish mein baat kar — bilkul dost ki tarah.
 Coding mein poora working code de, Hindi mein samjha.
@@ -96,120 +92,118 @@ Hamesha bol: Shabash Vipul! Bahut acha! Koi baat nahi!
 Jawab 3-4 lines mein rakho — code ho toh poora do.`;
 
 const modeMsg = {
-  chat: "💬 Baat karo! Kuch bhi poochho!",
-  code: "💻 Coding mode! Python, HTML, JavaScript — kya sikhna hai?",
-  web:  "🌐 Website mode! Kya banana hai?",
-  voice:"🎙 Voice mode! Mic tap karo aur boliye!"
+  chat:"💬 Baat karo! Kuch bhi poochho!",
+  code:"💻 Coding mode! Python, HTML, JavaScript?",
+  web:"🌐 Website mode! Kya banana hai?",
+  voice:"🎙 Voice mode! Mic tap karo!"
 };
 
-function setMode(m, btn) {
-  document.querySelectorAll('.mbtn').forEach(b => b.classList.remove('on'));
+function setMode(m,btn){
+  document.querySelectorAll('.mbtn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
-  addMsg("DRISHTI", modeMsg[m]);
+  addMsg("DRISHTI",modeMsg[m]);
 }
 
-function addMsg(who, text) {
-  const c = document.getElementById("chat");
-  const t = document.getElementById("typing");
-  if(t) t.remove();
-  const d = document.createElement("div");
-  d.className = who === "DRISHTI" ? "bubble bot" : "bubble usr";
-  if(who === "DRISHTI") {
-    const f = text
-      .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\n/g, '<br>');
-    d.innerHTML = `<div class="bname">👁 DRISHTI</div>${f}`;
-  } else {
-    d.textContent = text;
-  }
+function addMsg(who,text){
+  const c=document.getElementById("chat");
+  const t=document.getElementById("typing");
+  if(t)t.remove();
+  const d=document.createElement("div");
+  d.className=who==="DRISHTI"?"bubble bot":"bubble usr";
+  if(who==="DRISHTI"){
+    const f=text
+      .replace(/```(\w*)\n?([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
+      .replace(/`([^`]+)`/g,'<code>$1</code>')
+      .replace(/\n/g,'<br>');
+    d.innerHTML=`<div class="bname">👁 DRISHTI</div>${f}`;
+  }else{d.textContent=text;}
   c.appendChild(d);
-  c.scrollTop = c.scrollHeight;
+  c.scrollTop=c.scrollHeight;
 }
 
-function showTyping() {
-  const c = document.getElementById("chat");
-  const d = document.createElement("div");
-  d.className = "typing"; d.id = "typing";
-  d.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
-  c.appendChild(d);
-  c.scrollTop = c.scrollHeight;
+function showTyping(){
+  const c=document.getElementById("chat");
+  const d=document.createElement("div");
+  d.className="typing";d.id="typing";
+  d.innerHTML='<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+  c.appendChild(d);c.scrollTop=c.scrollHeight;
 }
 
-function quickSend(msg) {
-  document.getElementById("inp").value = msg;
-  send();
+function quickSend(msg){
+  document.getElementById("inp").value=msg;send();
 }
 
-async function send() {
-  const inp = document.getElementById("inp");
-  const msg = inp.value.trim();
-  if(!msg) return;
-  inp.value = "";
-  addMsg("Vipul", msg);
+async function send(){
+  const inp=document.getElementById("inp");
+  const msg=inp.value.trim();
+  if(!msg)return;
+  inp.value="";
+  addMsg("Vipul",msg);
   showTyping();
-  document.getElementById("sbar").textContent = "DRISHTI soch rahi hai...";
-  history.push({role:"user", parts:[{text: msg}]});
-
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        system_instruction: {parts: [{text: SYSTEM}]},
-        contents: history,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 800
-        }
+  document.getElementById("sbar").textContent="DRISHTI soch rahi hai...";
+  history.push({role:"user",content:msg});
+  try{
+    const res=await fetch(API_URL,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer "+API_KEY
+      },
+      body:JSON.stringify({
+        model:"llama3-8b-8192",
+        messages:[
+          {role:"system",content:SYSTEM},
+          ...history
+        ],
+        temperature:0.7,
+        max_tokens:800
       })
     });
-    const data = await res.json();
-    if(data.error) {
-      addMsg("DRISHTI", "⚠️ " + data.error.message);
-      document.getElementById("sbar").textContent = "Error!";
+    const data=await res.json();
+    if(data.error){
+      addMsg("DRISHTI","⚠️ "+data.error.message);
+      document.getElementById("sbar").textContent="Error!";
       return;
     }
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Dobara try karo!";
-    history.push({role:"model", parts:[{text: reply}]});
-    addMsg("DRISHTI", reply);
+    const reply=data.choices?.[0]?.message?.content||"Dobara try karo!";
+    history.push({role:"assistant",content:reply});
+    addMsg("DRISHTI",reply);
     speak(reply);
-    document.getElementById("sbar").textContent = "Ready! ✅";
-  } catch(e) {
-    addMsg("DRISHTI", "⚠️ Network error! Internet check karo.");
-    document.getElementById("sbar").textContent = "Error!";
+    document.getElementById("sbar").textContent="Ready! ✅";
+  }catch(e){
+    addMsg("DRISHTI","⚠️ Network error! Internet check karo.");
+    document.getElementById("sbar").textContent="Error!";
   }
 }
 
-function speak(text) {
-  if(!window.speechSynthesis) return;
+function speak(text){
+  if(!window.speechSynthesis)return;
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(
+  const u=new SpeechSynthesisUtterance(
     text.replace(/```[\s\S]*?```/g,'').replace(/[*#`]/g,'').substring(0,250)
   );
-  u.lang = "hi-IN"; u.rate = 0.9; u.pitch = 1.1;
+  u.lang="hi-IN";u.rate=0.9;u.pitch=1.1;
   speechSynthesis.speak(u);
 }
 
-function toggleMic() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR) { alert("Chrome use karo voice ke liye!"); return; }
-  if(listening) { recog.stop(); return; }
-  recog = new SR();
-  recog.lang = "hi-IN";
-  recog.onstart = () => {
-    listening = true;
+function toggleMic(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert("Chrome use karo!");return;}
+  if(listening){recog.stop();return;}
+  recog=new SR();recog.lang="hi-IN";
+  recog.onstart=()=>{
+    listening=true;
     document.getElementById("mic").classList.add("on");
-    document.getElementById("sbar").textContent = "Sun rahi hoon... 🎙";
+    document.getElementById("sbar").textContent="Sun rahi hoon... 🎙";
   };
-  recog.onresult = (e) => {
-    document.getElementById("inp").value = e.results[0][0].transcript;
+  recog.onresult=(e)=>{
+    document.getElementById("inp").value=e.results[0][0].transcript;
     send();
   };
-  recog.onend = () => {
-    listening = false;
+  recog.onend=()=>{
+    listening=false;
     document.getElementById("mic").classList.remove("on");
-    document.getElementById("sbar").textContent = "Ready!";
+    document.getElementById("sbar").textContent="Ready!";
   };
   recog.start();
 }
