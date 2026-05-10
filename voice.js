@@ -1,126 +1,100 @@
-// voice.js — DRISHTI AI Master Voice Engine v5.0
-// Fully Optimized for Android (Chrome) & iOS (Safari/iPhone/iPad)
-
+// voice.js — DRISHTI AI Master Engine v5.2 (Pro Version)
 window.DrishtiVoice = {
     isListening: false,
     recognition: null,
+    silenceTimer: null,
 
     init: function() {
         const mic = document.getElementById("mic");
         if(mic) {
-            mic.removeAttribute("onclick");
-            mic.addEventListener("click", () => this.toggle());
+            // पुराने इवेंट्स हटाकर साफ़ शुरुआत
+            mic.replaceWith(mic.cloneNode(true));
+            document.getElementById("mic").addEventListener("click", () => this.toggle());
         }
-        console.log("✅ DRISHTI Voice Engine v5.0 Ready!");
+        console.log("🚀 DRISHTI Pro-Voice Engine Activated!");
     },
 
     toggle: function() {
-        if(this.isListening) {
-            this.stop();
-        } else {
-            this.start();
-        }
+        this.isListening ? this.stop() : this.start();
     },
 
     start: function() {
-        // 1. Browser Detection & Logic
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        
-        if(!SR) {
-            alert("Aapka browser voice support nahi karta. Android Chrome ya iOS Safari use karein!");
-            return;
-        }
+        if(!SR) return alert("Browser Support Error!");
 
-        // 2. iPhone/Safari Audio Context Fix (Crucial for iOS)
-        if (window.AudioContext || window.webkitAudioContext) {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-        }
+        // iPhone/iPad Safari Audio Context Fix
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
 
         this.recognition = new SR();
-        
-        // 3. Perfect Hindi Support
-        this.recognition.lang = "hi-IN"; 
-        this.recognition.continuous = true; // लगातार सुनने के लिए
-        this.recognition.interimResults = true; // लाइव टेक्स्ट दिखाने के लिए
-        this.recognition.maxAlternatives = 1;
+        this.recognition.lang = "hi-IN"; // शुद्ध हिंदी सपोर्ट
+        this.recognition.continuous = true; 
+        this.recognition.interimResults = true; // लाइव टाइपिंग चालू
 
         this.recognition.onstart = () => {
             this.isListening = true;
             const mic = document.getElementById("mic");
-            if(mic) {
-                mic.style.background = "#DC2626"; // Red when listening
-                mic.style.boxShadow = "0 0 15px #DC2626";
-                mic.textContent = "🛑";
-            }
-            document.getElementById("sbar").textContent = "Sun rahi hoon... boliye! 🎙";
+            mic.style.background = "radial-gradient(circle, #ff4d4d, #b30000)";
+            mic.style.boxShadow = "0 0 20px #ff4d4d";
+            mic.innerHTML = "<span>🛑</span>";
+            document.getElementById("sbar").textContent = "सुन रही हूँ... बोलिए 🎙️";
         };
 
         this.recognition.onresult = (e) => {
-            let currentText = "";
+            let interim_transcript = '';
+            let final_transcript = '';
+
             for (let i = e.resultIndex; i < e.results.length; ++i) {
                 if (e.results[i].isFinal) {
-                    currentText += e.results[i][0].transcript;
+                    final_transcript += e.results[i][0].transcript;
+                } else {
+                    interim_transcript += e.results[i][0].transcript;
                 }
             }
 
-            if(currentText.trim() !== "") {
-                document.getElementById("inp").value = currentText;
-                document.getElementById("sbar").textContent = `Suna: "${currentText}"`;
-                
-                // Auto-send with slight delay
-                clearTimeout(this.sendTimeout);
-                this.sendTimeout = setTimeout(() => {
-                    if(window.send) {
-                        window.send();
-                        this.stop(); // सेंड करने के बाद माइक बंद
-                    }
-                }, 1000);
-            }
+            const inputField = document.getElementById("inp");
+            // जैसे ही तुम बोलोगे, यहाँ लाइव टाइप होगा (Gemini की तरह)
+            inputField.value = final_transcript || interim_transcript;
+            
+            // स्मार्ट ऑटो-सेंड: अगर तुम 2 सेकंड तक चुप रहे, तो खुद सेंड हो जाएगा
+            clearTimeout(this.silenceTimer);
+            this.silenceTimer = setTimeout(() => {
+                if(final_transcript.trim() !== "") this.stop();
+            }, 2000);
         };
 
         this.recognition.onerror = (e) => {
-            console.error("Voice Error:", e.error);
-            if(e.error === "not-allowed") {
-                alert("Mic permission block hai! Browser settings mein allow karein.");
-            }
+            console.error("Error:", e.error);
             this.reset();
         };
 
         this.recognition.onend = () => {
-            this.reset();
+            if(this.isListening) this.recognition.start(); // कनेक्शन बनाए रखना
         };
 
-        try {
-            this.recognition.start();
-        } catch(err) {
-            console.error("Start Error:", err);
-            this.reset();
-        }
+        this.recognition.start();
     },
 
     stop: function() {
-        if(this.recognition) {
-            this.recognition.stop();
-        }
+        this.isListening = false;
+        if(this.recognition) this.recognition.stop();
         this.reset();
+        // टाइप होने के बाद ऑटो-सेंड फंक्शन को कॉल करना
+        setTimeout(() => {
+            if(window.send && document.getElementById("inp").value.trim() !== "") {
+                window.send();
+            }
+        }, 500);
     },
 
     reset: function() {
         this.isListening = false;
         const mic = document.getElementById("mic");
-        if(mic) {
-            mic.style.background = "#EC4899"; // Original Pink
-            mic.style.boxShadow = "none";
-            mic.textContent = "🎙";
-        }
-        document.getElementById("sbar").textContent = "Ready!";
+        mic.style.background = "#EC4899";
+        mic.style.boxShadow = "none";
+        mic.innerHTML = "🎙️";
+        document.getElementById("sbar").textContent = "तैयार हूँ!";
     }
 };
 
-// Auto Init on Page Load
-document.addEventListener("DOMContentLoaded", () => {
-    window.DrishtiVoice.init();
-});
+document.addEventListener("DOMContentLoaded", () => window.DrishtiVoice.init());
