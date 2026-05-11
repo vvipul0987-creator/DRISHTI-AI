@@ -1,239 +1,210 @@
-// voice.js — DRISHTI The Flawless Engine v6.0
-// VIPUL VERMA EXCLUSIVE | ZERO-LEAK | ZERO-LOOP
+// voice.js — DRISHTI Ultimate v8.0 (The Flawless Hybrid)
+// 🛠️ FIX: Loop, Ghost-results, and iOS Crashing
+// 🎨 STYLE: Orbitron & Rajdhani Integration
 
 window.DrishtiVoice = {
   isListening: false,
-  isWakeListening: false,
+  isSending: false,
+  hasFinalResult: false,
   recognition: null,
   wakeRecognition: null,
-  isSending: false,
-  hasResult: false,
-  clickLock: false, // 🛡️ Tap-Spam Protection
+  isWakeListening: false,
+  engineLock: false, // 🛡️ 'Spam' रोकने के लिए एक्स्ट्रा लॉक
 
   browser: {
-    isSafari: /^((?!chrome|android).)*safari/i.test(navigator.userAgent),
     isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
-    isAndroid: /android/i.test(navigator.userAgent),
+    isAndroid: /android/i.test(navigator.userAgent)
   },
 
-  injectAesthetics: function() {
-    if (document.getElementById('dv-flawless-css')) return;
+  init: function() {
+    this.injectStyles();
+    
+    const mic = document.getElementById("mic");
+    if(mic) {
+      // पुराने इवेंट्स हटाकर नए जोड़ना
+      const newMic = mic.cloneNode(true);
+      mic.replaceWith(newMic);
+      
+      const tapHandler = (e) => {
+        e.preventDefault();
+        if(!this.isSending && !this.engineLock) this.toggle();
+      };
+      
+      newMic.addEventListener("click", tapHandler);
+      newMic.addEventListener("touchstart", tapHandler, { passive: false });
+    }
+
+    // Android/PC के लिए Wake Word चालू
+    if(!this.browser.isIOS) {
+      setTimeout(() => this.startWakeWord(), 2000);
+      this.showMsg("Drishti: Wake Word Active ✨", "normal");
+    } else {
+      this.showMsg("Apple Device: Tap to Speak 🎙", "normal");
+    }
+    
+    console.log("💎 DRISHTI v8.0 ONLINE — ZERO GHOSTING MODE");
+  },
+
+  injectStyles: function() {
+    if (document.getElementById('dr-v8-css')) return;
     const style = document.createElement('style');
-    style.id = 'dv-flawless-css';
+    style.id = 'dr-v8-css';
     style.innerHTML = `
       @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500;700&display=swap');
-      body { font-family: 'Rajdhani', sans-serif !important; }
-      #mic { font-family: 'Orbitron', sans-serif !important; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); user-select: none; }
-      .mic-wake { box-shadow: 0 0 15px #F59E0B; background: #F59E0B !important; }
-      .mic-active { box-shadow: 0 0 25px #DC2626; background: #DC2626 !important; transform: scale(1.1); }
-      #sbar { font-family: 'Orbitron', sans-serif; font-size: 12px; transition: color 0.3s ease; }
+      #mic { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+      .mic-active { transform: scale(1.2); box-shadow: 0 0 30px #DC2626 !important; background: #DC2626 !important; }
+      .mic-sending { transform: rotate(360deg); opacity: 0.7; pointer-events: none; }
+      #sbar { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
     `;
     document.head.appendChild(style);
   },
 
-  init: function() {
-    this.injectAesthetics();
-    
-    // iOS Hard Audio Wakeup
-    if(this.browser.isIOS) {
-        const unlockAudio = () => {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if(AudioContext) {
-                const ctx = new AudioContext();
-                if(ctx.state === 'suspended') ctx.resume();
-            }
-            document.removeEventListener('touchstart', unlockAudio);
-        };
-        document.addEventListener('touchstart', unlockAudio);
-    }
-
-    const mic = document.getElementById("mic");
-    if(mic) {
-      mic.replaceWith(mic.cloneNode(true));
-      const newMic = document.getElementById("mic");
-      
-      const handleMicTap = (e) => {
-          e.preventDefault();
-          if(this.clickLock || this.isSending) return; // 🛡️ Spam Lock
-          this.clickLock = true;
-          setTimeout(() => { this.clickLock = false; }, 400); // 400ms Cooldown
-          this.toggle();
-      };
-
-      newMic.addEventListener("click", handleMicTap);
-      newMic.addEventListener("touchstart", handleMicTap, { passive: false });
-    }
-
-    const inp = document.getElementById("inp");
-    if(inp) inp.addEventListener("input", () => { this.hasResult = false; });
-
-    if(!this.browser.isIOS) {
-        this.startWakeWord();
-        this.showMsg("READY! 'Hey DRISHTI' बोलो या टैप करो 🎙", "normal");
-    } else {
-        this.showMsg("APPLE SYSTEM READY: टैप करके बोलें 🎙", "normal");
-    }
-    
-    console.log("💎 DRISHTI v6.0 FLAWLESS ENGINE RUNNING");
-  },
-
-  // ── WAKE WORD (Optimized for Memory) ──
+  // ── WAKE WORD SYSTEM (FOR ANDROID) ──
   startWakeWord: function() {
-    if(this.browser.isIOS) return; 
-    
+    if(this.browser.isIOS || this.isListening || this.isWakeListening) return;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if(!SR || this.isWakeListening || this.isListening) return;
+    if(!SR) return;
 
-    try {
-      this.wakeRecognition = new SR();
-      this.wakeRecognition.lang = "hi-IN";
-      this.wakeRecognition.continuous = true;
-      this.wakeRecognition.interimResults = true;
-
-      this.wakeRecognition.onresult = (e) => {
-        for(let i = e.resultIndex; i < e.results.length; i++) {
-          const text = e.results[i][0].transcript.toLowerCase();
-          if(text.includes("drishti") || text.includes("दृष्टि") || text.includes("hey drishti")) {
-            this.onWakeWord();
-            break;
-          }
-        }
-      };
-
-      this.wakeRecognition.onend = () => {
-        this.isWakeListening = false;
-        // 🔬 Memory Leak Prevention: Nullify old instance before restarting
-        this.wakeRecognition = null; 
-        if(!this.isListening && !this.browser.isIOS) setTimeout(() => this.startWakeWord(), 800);
-      };
-
-      this.wakeRecognition.start();
-      this.isWakeListening = true;
-    } catch(e) {}
-  },
-
-  onWakeWord: function() {
-    if(this.isListening) return;
-    this.stopWakeWord();
+    this.wakeRecognition = new SR();
+    this.wakeRecognition.lang = "hi-IN";
+    this.wakeRecognition.continuous = true;
     
-    this.setMicStyle("wake");
-    this.showMsg("👋 HEY DRISHTI! बोलिए...", "active");
-    if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
-
-    setTimeout(() => this.start(), 500);
+    this.wakeRecognition.onresult = (e) => {
+      const text = e.results[e.results.length-1][0].transcript.toLowerCase();
+      if(text.includes("drishti") || text.includes("दृष्टि")) {
+        this.stopWakeWord();
+        this.start();
+      }
+    };
+    
+    this.wakeRecognition.onend = () => {
+      this.isWakeListening = false;
+      if(!this.isListening) setTimeout(() => this.startWakeWord(), 1000);
+    };
+    
+    try { this.wakeRecognition.start(); this.isWakeListening = true; } catch(e) {}
   },
 
   stopWakeWord: function() {
     if(this.wakeRecognition) {
-      try { this.wakeRecognition.onend = null; this.wakeRecognition.abort(); } catch(e) {}
+      this.wakeRecognition.onend = null;
+      try { this.wakeRecognition.abort(); } catch(e) {}
       this.wakeRecognition = null;
     }
     this.isWakeListening = false;
   },
 
-  // ── MAIN ENGINE (Zero-Loop Precision) ──
+  // ── MAIN VOICE ENGINE ──
   toggle: function() {
-    this.isListening ? this.stop(false) : this.start();
+    if(this.isListening) this.stop(false);
+    else this.start();
   },
 
   start: function() {
-    if(this.isListening || this.isSending) return;
-
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if(!SR) return;
-
+    if(this.isSending || this.isListening) return;
     this.stopWakeWord();
 
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     this.recognition = new SR();
     this.recognition.lang = "hi-IN";
-    this.recognition.continuous = false;
     this.recognition.interimResults = true;
+    this.recognition.continuous = false;
 
     this.recognition.onstart = () => {
       this.isListening = true;
-      this.hasResult = false;
-      this.setMicStyle("active");
-      this.showMsg("🎙 सुन रही हूँ...", "active");
+      this.hasFinalResult = false;
+      this.updateMicUI("active");
+      this.showMsg("🎙 LISTENING...", "active");
     };
 
     this.recognition.onresult = (e) => {
-      if(this.hasResult || this.isSending) return;
+      if(this.hasFinalResult || this.isSending) return;
 
-      let interim = "", final = "";
-      for(let i = e.resultIndex; i < e.results.length; i++) {
-        const t = e.results[i][0].transcript;
-        if(e.results[i].isFinal) final += t;
-        else interim += t;
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const transcript = e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          this.processResult(transcript);
+        } else {
+          interim = transcript;
+        }
       }
-
-      const inp = document.getElementById("inp");
-      if(interim && !final && inp) inp.value = interim;
-
-      if(final) {
-        this.hasResult = true;
-        this.recognition.onresult = null; // 🛡️ Ghost-Killer
-
-        let cleanText = final.replace(/hey drishti/gi, "").replace(/drishti/gi, "").replace(/दृष्टि/g, "").trim();
-        if(inp) inp.value = cleanText;
-        
-        this.showMsg(`✅ सुना: "${cleanText}"`, "success");
-        this.stop(true); 
+      
+      if(interim && !this.hasFinalResult) {
+        const inp = document.getElementById("inp");
+        if(inp) { 
+          inp.value = interim;
+          inp.style.color = "#A855F7"; // Interim text in Purple
+        }
       }
     };
 
     this.recognition.onerror = () => this.reset();
-    this.recognition.onend = () => { 
-        if(!this.hasResult && !this.isSending) this.reset(); 
-    };
+    this.recognition.onend = () => { if(!this.hasFinalResult) this.reset(); };
 
     try { this.recognition.start(); } catch(e) { this.reset(); }
   },
 
-  stop: function(shouldSend) {
-    this.isListening = false;
+  processResult: function(text) {
+    this.hasFinalResult = true;
+    this.isSending = true; // 🛡️ LOCK: अब कोई दूसरा रिजल्ट नहीं आएगा
+    this.engineLock = true;
+    
     if(this.recognition) {
-      try { this.recognition.onend = null; this.recognition.stop(); } catch(e) {}
-      this.recognition = null; // 🔬 Memory Cleanup
+        this.recognition.onresult = null;
+        this.recognition.stop();
     }
-    this.setMicStyle("normal");
 
-    if(shouldSend && !this.isSending) {
-      this.isSending = true; 
-      setTimeout(() => {
-        const inp = document.getElementById("inp");
-        if(window.send && inp && inp.value.trim() !== "") {
-          window.send();
-          setTimeout(() => {
-            if(inp) inp.value = "";
-            this.isSending = false;
-            if(!this.browser.isIOS) setTimeout(() => this.startWakeWord(), 1000); 
-          }, 400);
-        } else {
-            this.isSending = false;
-            if(!this.browser.isIOS) setTimeout(() => this.startWakeWord(), 1000);
-        }
-      }, 300);
+    const inp = document.getElementById("inp");
+    let cleanText = text.replace(/hey drishti/gi, "").replace(/drishti/gi, "").replace(/दृष्टि/g, "").trim();
+    
+    if(inp) {
+        inp.value = cleanText;
+        inp.style.color = "#ffffff";
     }
+
+    this.updateMicUI("sending");
+    this.showMsg("✅ SENT", "success");
+
+    // ⚡ INNOVATION: सेंड फंक्शन को कॉल करने का सबसे सुरक्षित तरीका
+    setTimeout(() => {
+      if(window.send) {
+          window.send();
+          setTimeout(() => this.reset(), 1000); // 1 सेकंड बाद वापस नॉर्मल
+      } else {
+          this.reset();
+      }
+    }, 400);
+  },
+
+  stop: function(send) {
+    if(this.recognition) this.recognition.stop();
+    if(!send) this.reset();
   },
 
   reset: function() {
     this.isListening = false;
     this.isSending = false;
-    this.hasResult = false;
-    if(this.recognition) { 
-        try { this.recognition.abort(); } catch(e) {} 
-        this.recognition = null;
-    }
-    this.setMicStyle("normal");
-    this.showMsg(this.browser.isIOS ? "APPLE SYSTEM: टैप करके बोलें 🎙" : "READY! 'Hey DRISHTI' बोलो या टैप करो 🎙", "normal");
-    if(!this.browser.isIOS) setTimeout(() => this.startWakeWord(), 1000);
+    this.hasFinalResult = false;
+    this.engineLock = false;
+    this.updateMicUI("normal");
+    this.showMsg(this.browser.isIOS ? "Tap Mic to Speak" : "Ready: 'Hey Drishti'", "normal");
+    if(!this.browser.isIOS) this.startWakeWord();
   },
 
-  setMicStyle: function(state) {
+  updateMicUI: function(state) {
     const mic = document.getElementById("mic");
     if(!mic) return;
-    mic.className = state === "active" ? "mic-active" : (state === "wake" ? "mic-wake" : "");
-    mic.innerHTML = state === "active" ? "🔴" : (state === "wake" ? "✨" : "🎙");
+    mic.className = ""; // Reset classes
+    if(state === "active") {
+        mic.classList.add("mic-active");
+        mic.innerHTML = "🔴";
+    } else if(state === "sending") {
+        mic.classList.add("mic-sending");
+        mic.innerHTML = "✨";
+    } else {
+        mic.innerHTML = "🎙";
+    }
   },
 
   showMsg: function(msg, type) {
