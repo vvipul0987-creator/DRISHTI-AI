@@ -1,357 +1,214 @@
-// voice.js — DRISHTI Voice v5.0 FINAL
-// iPad + iPhone + Android — Hamesha Kaam Kare
+/**
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════
+ * 🌌 DRISHTI QUANTUM LAYER — v50.0 (ULTIMATE RECURSION ENGINE)
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════
+ * ARCHITECTURE: ATOMIC RECURSIVE STATE MACHINE (A.R.S.M)
+ * PLATFORM: UNIVERSAL (IOS 16+, ANDROID, CHROME, SAFARI)
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════
+ */
 
-window.DrishtiVoice = (function() {
-  
-  // ── STATE ──
-  let SR = null;
-  let mainRec = null;
-  let wakeRec = null;
-  let isMain = false;
-  let isWake = false;
-  let isSending = false;
-  let hasResult = false;
-  let wakeTimer = null;
-  let restartTimer = null;
+window.DrishtiQuantum = (function() {
+    "use strict";
 
-  // ── DEVICE DETECT ──
-  const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const IS_ANDROID = /android/i.test(navigator.userAgent);
-  const IS_SAFARI = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  const HAS_SR = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-
-  // ── HELPERS ──
-  function getSR() {
-    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
-  }
-
-  function getLang() {
-    return (window.DrishtiLang && window.DrishtiLang.current === "english") 
-      ? "en-US" : "hi-IN";
-  }
-
-  function setStatus(msg, color) {
-    const s = document.getElementById("sbar");
-    if(!s) return;
-    s.textContent = msg;
-    s.style.color = color || "#4B5563";
-    if(color === "#DC2626") {
-      setTimeout(() => {
-        s.textContent = "Ready! 'Hey DRISHTI' bolo ya 🎙 tap karo";
-        s.style.color = "#4B5563";
-      }, 3000);
-    }
-  }
-
-  function setMicUI(state) {
-    const mic = document.getElementById("mic");
-    if(!mic) return;
-    const states = {
-      off:  { bg: "#EC4899", shadow: "none", icon: "🎙" },
-      wake: { bg: "#F59E0B", shadow: "0 0 20px #F59E0B88", icon: "✨" },
-      on:   { bg: "#DC2626", shadow: "0 0 20px #DC262688", icon: "🔴" },
-      send: { bg: "#059669", shadow: "0 0 20px #05996988", icon: "⏳" }
+    // ── 1. SYSTEM KERNEL (THE CONSTITUTION) ──
+    const KERNEL = {
+        CONFIG: {
+            IDLE_RECOVERY_MS: 1200,
+            SILENCE_THRESHOLD: 1650,
+            LOCKOUT_MS: 2500, // Anti-Echo Lock
+            MAX_RETRY: Infinity
+        },
+        STATE: {
+            IDLE: 0,
+            WAKE: 1,
+            LISTENING: 2,
+            PROCESSING: 3,
+            LOCKED: 4
+        }
     };
-    const s = states[state] || states.off;
-    mic.style.background = s.bg;
-    mic.style.boxShadow = s.shadow;
-    mic.innerHTML = s.icon;
-  }
 
-  function vibrate() {
-    try { if(navigator.vibrate) navigator.vibrate([80, 40, 80]); } catch(e) {}
-  }
+    // ── 2. VIRTUAL SHADOW STATE (THE MEMORY) ──
+    let _vss = {
+        current: KERNEL.STATE.IDLE,
+        engine: null,
+        buffer: "",
+        lastEvent: Date.now(),
+        retryCount: 0,
+        isApple: /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    };
 
-  function killRec(rec) {
-    if(!rec) return null;
-    try { rec.onstart = rec.onresult = rec.onerror = rec.onend = null; } catch(e) {}
-    try { rec.abort(); } catch(e) {}
-    return null;
-  }
+    // ── 3. HARDWARE INTERFACE (THE PHYSICAL LAYER) ──
+    const Hardware = {
+        getRecognition: () => {
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) return null;
+            const instance = new SR();
+            instance.lang = "hi-IN";
+            instance.interimResults = true;
+            // iOS fix: Continuous must be false for reliable ending on Apple
+            instance.continuous = !_vss.isApple; 
+            return instance;
+        },
 
-  // ── WAKE WORD ──
-  function startWake() {
-    clearTimeout(wakeTimer);
-    if(isMain || isWake || isSending) return;
-    
-    const S = getSR();
-    if(!S) return;
-
-    // iOS: user ne page touch kiya ho tab hi wake chalega
-    if(IS_IOS && !window._drishtiUserInteracted) return;
-
-    try {
-      wakeRec = new S();
-      wakeRec.lang = "hi-IN";
-      wakeRec.continuous = true;
-      wakeRec.interimResults = true;
-      wakeRec.maxAlternatives = 1;
-
-      wakeRec.onresult = function(e) {
-        if(isMain) return;
-        for(let i = e.resultIndex; i < e.results.length; i++) {
-          const t = e.results[i][0].transcript.toLowerCase();
-          if(t.includes("drishti") || t.includes("dristi") || 
-             t.includes("दृष्टि") || t.includes("drishthi")) {
-            onWake();
-            return;
-          }
+        // जड़ से खत्म करने वाला फंक्शन (To stop On/Off loop)
+        purge: function() {
+            if (_vss.engine) {
+                _vss.engine.onstart = _vss.engine.onresult = _vss.engine.onerror = _vss.engine.onend = null;
+                try { _vss.engine.abort(); _vss.engine.stop(); } catch(e) {}
+                _vss.engine = null;
+            }
         }
-      };
+    };
 
-      wakeRec.onend = function() {
-        isWake = false;
-        wakeRec = null;
-        if(!isMain && !isSending) {
-          wakeTimer = setTimeout(startWake, 800);
+    // ── 4. THE RECURSIVE ENGINE (THE LOGIC) ──
+    const Core = {
+        // --- WAKE WORD DAEMON (HAMESHA ON) ---
+        bootWake: function() {
+            if (_vss.current !== KERNEL.STATE.IDLE) return;
+            
+            Hardware.purge();
+            _vss.engine = Hardware.getRecognition();
+            if (!_vss.engine) return;
+
+            _vss.current = KERNEL.STATE.WAKE;
+            
+            _vss.engine.onresult = (e) => {
+                const transcript = Array.from(e.results)
+                    .map(r => r[0].transcript.toLowerCase())
+                    .join("");
+                
+                if (transcript.includes("drishti") || transcript.includes("दृष्टि")) {
+                    this.transitionToMain();
+                }
+            };
+
+            _vss.engine.onend = () => {
+                if (_vss.current === KERNEL.STATE.WAKE) {
+                    setTimeout(() => this.bootWake(), 800);
+                }
+            };
+
+            _vss.engine.onerror = () => { this.rebootSystem(); };
+
+            try { _vss.engine.start(); } catch(e) { this.rebootSystem(); }
+        },
+
+        // --- MAIN LISTENER (THE ACTION) ---
+        transitionToMain: function() {
+            _vss.current = KERNEL.STATE.LISTENING;
+            Hardware.purge();
+            
+            if ("vibrate" in navigator) navigator.vibrate([40, 30, 40]);
+            
+            _vss.engine = Hardware.getRecognition();
+            _vss.engine.onstart = () => {
+                UI.update("🎙️ Sun rahi hoon...", "#DC2626", "active");
+            };
+
+            _vss.engine.onresult = (e) => {
+                let interim = "";
+                let final = "";
+                for (let i = e.resultIndex; i < e.results.length; i++) {
+                    if (e.results[i].isFinal) final += e.results[i][0].transcript;
+                    else interim += e.results[i][0].transcript;
+                }
+
+                _vss.buffer = final || interim;
+                UI.drawInput(_vss.buffer, !!final);
+
+                // Gemini Logic: Silence detection
+                clearTimeout(_vss.debounce);
+                _vss.debounce = setTimeout(() => {
+                    if (_vss.buffer.trim() && _vss.current === KERNEL.STATE.LISTENING) {
+                        this.executeDispatch(_vss.buffer);
+                    }
+                }, KERNEL.CONFIG.SILENCE_THRESHOLD);
+            };
+
+            _vss.engine.onend = () => {
+                if (_vss.current === KERNEL.STATE.LISTENING && !_vss.isProcessing) {
+                    this.rebootSystem();
+                }
+            };
+
+            try { _vss.engine.start(); } catch(e) { this.rebootSystem(); }
+        },
+
+        // --- THE DISPATCHER (THE SENDER) ---
+        executeDispatch: function(payload) {
+            if (_vss.current === KERNEL.STATE.LOCKED) return;
+            
+            _vss.current = KERNEL.STATE.LOCKED;
+            _vss.isProcessing = true;
+            Hardware.purge();
+
+            UI.update("🚀 Processing...", "#059669", "sending");
+
+            // Apple Echo Protection (2 second buffer)
+            setTimeout(() => {
+                if (window.send && payload.trim()) {
+                    window.send();
+                }
+                
+                // Lockdown to prevent hearing its own voice
+                setTimeout(() => {
+                    _vss.isProcessing = false;
+                    _vss.current = KERNEL.STATE.IDLE;
+                    this.rebootSystem();
+                }, KERNEL.CONFIG.LOCKOUT_MS);
+            }, 400);
+        },
+
+        rebootSystem: function() {
+            Hardware.purge();
+            _vss.current = KERNEL.STATE.IDLE;
+            _vss.buffer = "";
+            UI.update("Ready! 'Hey Drishti' boliye", "#4B5563", "idle");
+            setTimeout(() => this.bootWake(), 1000);
         }
-      };
+    };
 
-      wakeRec.onerror = function(e) {
-        isWake = false;
-        wakeRec = null;
-        if(e.error !== "not-allowed" && e.error !== "aborted") {
-          wakeTimer = setTimeout(startWake, 1500);
+    // ── 5. UI ADAPTER (THE FACE) ──
+    const UI = {
+        update: (msg, col, mode) => {
+            const s = document.getElementById("sbar");
+            if(s) { s.textContent = msg; s.style.color = col; }
+            const m = document.getElementById("mic");
+            if(m) m.className = "mic-btn-quantum " + mode;
+        },
+        drawInput: (val, final) => {
+            const i = document.getElementById("inp");
+            if(i) { i.value = val; i.style.color = final ? "#fff" : "#A855F7"; }
         }
-      };
+    };
 
-      wakeRec.start();
-      isWake = true;
+    // ── 6. BOOTLOADER ──
+    return {
+        start: function() {
+            console.log("%c DRISHTI QUANTUM LAYER v50 ONLINE ", "background:#7C3AED; color:#fff; padding:10px; font-weight:bold;");
+            
+            const btn = document.getElementById("mic");
+            if(btn) {
+                btn.onclick = (e) => {
+                    e.preventDefault();
+                    if (_vss.current !== KERNEL.STATE.LISTENING) Core.transitionToMain();
+                    else Core.executeDispatch(_vss.buffer);
+                };
+            }
 
-    } catch(e) {
-      isWake = false;
-      wakeTimer = setTimeout(startWake, 2000);
-    }
-  }
+            // CSS Injection for Quantum UI
+            const style = document.createElement("style");
+            style.innerHTML = `
+                .mic-btn-quantum { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+                .mic-btn-quantum.active { transform: scale(1.2); box-shadow: 0 0 30px rgba(220, 38, 38, 0.6); background: #DC2626 !important; }
+                .mic-btn-quantum.sending { opacity: 0.5; pointer-events: none; }
+            `;
+            document.head.appendChild(style);
 
-  function stopWake() {
-    clearTimeout(wakeTimer);
-    wakeRec = killRec(wakeRec);
-    isWake = false;
-  }
-
-  function onWake() {
-    if(isMain) return;
-    stopWake();
-    vibrate();
-    setMicUI("wake");
-    setStatus("👋 Hey! Boliye DRISHTI sun rahi hai...", "#F59E0B");
-    setTimeout(() => startMain(), 600);
-  }
-
-  // ── MAIN RECOGNITION ──
-  function startMain() {
-    if(isMain || isSending) return;
-    stopWake();
-
-    const S = getSR();
-    if(!S) {
-      setStatus("Chrome ya Safari use karo!", "#DC2626");
-      return;
-    }
-
-    mainRec = killRec(mainRec);
-    hasResult = false;
-
-    try {
-      mainRec = new S();
-      mainRec.lang = getLang();
-      mainRec.continuous = false;
-      mainRec.interimResults = !IS_IOS; // iOS mein interim nahi
-      mainRec.maxAlternatives = IS_IOS ? 1 : 3;
-
-      mainRec.onstart = function() {
-        isMain = true;
-        setMicUI("on");
-        setStatus("🎙 Sun rahi hoon... boliye!", "#A855F7");
-      };
-
-      mainRec.onresult = function(e) {
-        if(hasResult) return;
-
-        let interim = "";
-        let final = "";
-
-        for(let i = e.resultIndex; i < e.results.length; i++) {
-          const t = e.results[i][0].transcript;
-          if(e.results[i].isFinal) final += t;
-          else interim += t;
+            Core.bootWake();
         }
-
-        const inp = document.getElementById("inp");
-        if(!inp) return;
-
-        // Preview
-        if(interim) {
-          inp.value = interim;
-          inp.style.color = "#A855F7";
-        }
-
-        // Final
-        if(final) {
-          hasResult = true;
-          // Wake word filter karo
-          const clean = final.trim()
-            .replace(/hey drishti/gi, "")
-            .replace(/drishti/gi, "")
-            .replace(/दृष्टि/g, "")
-            .trim();
-
-          const msg = clean || final.trim();
-          inp.value = msg;
-          inp.style.color = "#ffffff";
-
-          setStatus(`✅ "${msg}"`, "#059669");
-          setMicUI("send");
-          stopMain();
-          doSend(inp, msg);
-        }
-      };
-
-      mainRec.onerror = function(e) {
-        if(e.error === "aborted") {
-          isMain = false;
-          return;
-        }
-        const errors = {
-          "no-speech": "Kuch sunai nahi diya, dobara try karo!",
-          "not-allowed": "⚠️ Mic permission do! Settings > Microphone",
-          "network": "Internet check karo!",
-          "audio-capture": "Mic available nahi hai!"
-        };
-        setStatus(errors[e.error] || "Voice error: " + e.error, "#DC2626");
-        resetMain();
-        setTimeout(startWake, 1000);
-      };
-
-      mainRec.onend = function() {
-        if(!hasResult && !isSending) {
-          resetMain();
-          setTimeout(startWake, 800);
-        } else {
-          isMain = false;
-          mainRec = null;
-        }
-      };
-
-      mainRec.start();
-
-    } catch(e) {
-      resetMain();
-      setTimeout(startWake, 1000);
-    }
-  }
-
-  function stopMain() {
-    isMain = false;
-    if(mainRec) {
-      try { mainRec.stop(); } catch(e) {}
-    }
-  }
-
-  function resetMain() {
-    isMain = false;
-    isSending = false;
-    hasResult = false;
-    mainRec = killRec(mainRec);
-    setMicUI("off");
-    setStatus("Ready! 'Hey DRISHTI' bolo ya 🎙 tap karo", "#4B5563");
-  }
-
-  function doSend(inp, msg) {
-    if(isSending) return;
-    isSending = true;
-
-    setTimeout(() => {
-      if(window.send) {
-        window.send();
-      }
-      setTimeout(() => {
-        if(inp) inp.style.color = "#ffffff";
-        isSending = false;
-        hasResult = false;
-        setMicUI("off");
-        // Wake word wapas start karo
-        setTimeout(startWake, 1200);
-      }, 600);
-    }, 350);
-  }
-
-  // ── PUBLIC API ──
-  return {
-    isListening: false,
-    lastInputWasVoice: false,
-
-    init: function() {
-      // iOS user interaction track
-      document.addEventListener("touchstart", function() {
-        window._drishtiUserInteracted = true;
-      }, { once: true });
-      document.addEventListener("click", function() {
-        window._drishtiUserInteracted = true;
-      }, { once: true });
-
-      // Mic button
-      const mic = document.getElementById("mic");
-      if(mic) {
-        mic.removeAttribute("onclick");
-
-        mic.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          window._drishtiUserInteracted = true;
-          if(isMain) {
-            stopMain();
-            resetMain();
-            setTimeout(startWake, 500);
-          } else {
-            startMain();
-          }
-        });
-
-        mic.addEventListener("touchstart", (e) => {
-          e.preventDefault();
-          window._drishtiUserInteracted = true;
-          if(isMain) {
-            stopMain();
-            resetMain();
-            setTimeout(startWake, 500);
-          } else {
-            startMain();
-          }
-        }, { passive: false });
-      }
-
-      // Input typing detect
-      const inp = document.getElementById("inp");
-      if(inp) {
-        inp.addEventListener("input", () => {
-          this.lastInputWasVoice = false;
-        });
-      }
-
-      // Wake word shuru karo
-      if(HAS_SR) {
-        if(IS_IOS) {
-          // iOS: pehle touch ke baad
-          document.addEventListener("touchend", () => {
-            setTimeout(startWake, 500);
-          }, { once: true });
-        } else {
-          setTimeout(startWake, 1000);
-        }
-      }
-
-      setStatus("Ready! 'Hey DRISHTI' bolo ya 🎙 tap karo", "#4B5563");
-      console.log(`✅ DRISHTI Voice v5.0 | iOS:${IS_IOS} Android:${IS_ANDROID} Safari:${IS_SAFARI} SR:${HAS_SR}`);
-    }
-  };
+    };
 })();
 
-// Auto init
-if(document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => window.DrishtiVoice.init());
-} else {
-  setTimeout(() => window.DrishtiVoice.init(), 100);
-}
+// Initialize
+DrishtiQuantum.start();
