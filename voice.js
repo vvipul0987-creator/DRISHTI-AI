@@ -1,214 +1,350 @@
-/**
- * ════════════════════════════════════════════════════════════════════════════════════════════════════
- * 🌌 DRISHTI QUANTUM LAYER — v50.0 (ULTIMATE RECURSION ENGINE)
- * ════════════════════════════════════════════════════════════════════════════════════════════════════
- * ARCHITECTURE: ATOMIC RECURSIVE STATE MACHINE (A.R.S.M)
- * PLATFORM: UNIVERSAL (IOS 16+, ANDROID, CHROME, SAFARI)
- * ════════════════════════════════════════════════════════════════════════════════════════════════════
- */
+// voice.js — DRISHTI Ultimate Voice System v4.0
+// Hey DRISHTI wake word + All fixes + Futuristic
 
-window.DrishtiQuantum = (function() {
-    "use strict";
+window.DrishtiVoice = {
+  isListening: false,
+  isWakeListening: false, // Wake word ke liye alag
+  recognition: null,
+  wakeRecognition: null, // Wake word recognition
+  lastInputWasVoice: false,
+  isSending: false,
+  hasResult: false,
+  wakeWord: "drishti", // Wake word
 
-    // ── 1. SYSTEM KERNEL (THE CONSTITUTION) ──
-    const KERNEL = {
-        CONFIG: {
-            IDLE_RECOVERY_MS: 1200,
-            SILENCE_THRESHOLD: 1650,
-            LOCKOUT_MS: 2500, // Anti-Echo Lock
-            MAX_RETRY: Infinity
-        },
-        STATE: {
-            IDLE: 0,
-            WAKE: 1,
-            LISTENING: 2,
-            PROCESSING: 3,
-            LOCKED: 4
+  browser: {
+    isSafari: /^((?!chrome|android).)*safari/i.test(navigator.userAgent),
+    isChrome: /chrome/i.test(navigator.userAgent),
+    isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
+    isAndroid: /android/i.test(navigator.userAgent),
+  },
+
+  init: function() {
+    // Mic button
+    const mic = document.getElementById("mic");
+    if(mic) {
+      mic.removeAttribute("onclick");
+      mic.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if(!this.isSending) this.toggle();
+      });
+      mic.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        if(!this.isSending) this.toggle();
+      }, { passive: false });
+    }
+
+    // Input clear hone par reset
+    const inp = document.getElementById("inp");
+    if(inp) {
+      inp.addEventListener("input", () => {
+        this.lastInputWasVoice = false;
+      });
+    }
+
+    // Wake word shuru karo
+    this.startWakeWord();
+
+    // Status bar update
+    this.showMsg("Ready! 'Hey DRISHTI' bolo ya mic tap karo 🎙", "normal");
+    console.log("✅ DRISHTI Voice v4.0 — Hey DRISHTI Ready!");
+  },
+
+  // ── WAKE WORD SYSTEM ──
+  startWakeWord: function() {
+    const SR = window.SpeechRecognition ||
+               window.webkitSpeechRecognition;
+    if(!SR) return;
+
+    // iOS mein wake word background mein nahi chalta
+    // User tap ke baad shuru hoga
+    if(this.browser.isIOS) {
+      document.addEventListener("touchend", () => {
+        if(!this.isWakeListening && !this.isListening) {
+          this.initWakeWord(SR);
         }
-    };
+      }, { once: true });
+      return;
+    }
 
-    // ── 2. VIRTUAL SHADOW STATE (THE MEMORY) ──
-    let _vss = {
-        current: KERNEL.STATE.IDLE,
-        engine: null,
-        buffer: "",
-        lastEvent: Date.now(),
-        retryCount: 0,
-        isApple: /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-    };
+    this.initWakeWord(SR);
+  },
 
-    // ── 3. HARDWARE INTERFACE (THE PHYSICAL LAYER) ──
-    const Hardware = {
-        getRecognition: () => {
-            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SR) return null;
-            const instance = new SR();
-            instance.lang = "hi-IN";
-            instance.interimResults = true;
-            // iOS fix: Continuous must be false for reliable ending on Apple
-            instance.continuous = !_vss.isApple; 
-            return instance;
-        },
+  initWakeWord: function(SR) {
+    if(this.isWakeListening) return;
 
-        // जड़ से खत्म करने वाला फंक्शन (To stop On/Off loop)
-        purge: function() {
-            if (_vss.engine) {
-                _vss.engine.onstart = _vss.engine.onresult = _vss.engine.onerror = _vss.engine.onend = null;
-                try { _vss.engine.abort(); _vss.engine.stop(); } catch(e) {}
-                _vss.engine = null;
-            }
+    try {
+      this.wakeRecognition = new SR();
+      this.wakeRecognition.lang = "hi-IN";
+      this.wakeRecognition.continuous = true;
+      this.wakeRecognition.interimResults = true;
+
+      this.wakeRecognition.onresult = (e) => {
+        for(let i = e.resultIndex; i < e.results.length; i++) {
+          const text = e.results[i][0].transcript.toLowerCase();
+
+          // Wake word check
+          if(text.includes("drishti") || 
+             text.includes("dristi") || 
+             text.includes("दृष्टि") ||
+             text.includes("hey drishti") ||
+             text.includes("ड्रिश्टि")) {
+
+            // Wake word mila!
+            this.onWakeWord();
+            break;
+          }
         }
+      };
+
+      this.wakeRecognition.onend = () => {
+        this.isWakeListening = false;
+        // Restart wake word — hamesha sunta rahe
+        if(!this.isListening) {
+          setTimeout(() => this.initWakeWord(SR), 1000);
+        }
+      };
+
+      this.wakeRecognition.onerror = (e) => {
+        this.isWakeListening = false;
+        if(e.error !== "aborted" && e.error !== "not-allowed") {
+          setTimeout(() => this.initWakeWord(SR), 2000);
+        }
+      };
+
+      this.wakeRecognition.start();
+      this.isWakeListening = true;
+
+    } catch(e) {
+      console.log("Wake word error:", e);
+    }
+  },
+
+  onWakeWord: function() {
+    if(this.isListening) return;
+
+    // Wake word mila — main mic on karo
+    this.stopWakeWord();
+
+    // Visual feedback
+    this.showWakeAnimation();
+    this.showMsg("👋 Hey DRISHTI! Boliye...", "active");
+
+    // Thodi vibration (Android)
+    if(navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+    // Main mic shuru karo
+    setTimeout(() => this.start(), 500);
+  },
+
+  showWakeAnimation: function() {
+    const mic = document.getElementById("mic");
+    if(!mic) return;
+    mic.style.background = "#F59E0B";
+    mic.style.boxShadow = "0 0 30px #F59E0B";
+    mic.innerHTML = "✨";
+    setTimeout(() => {
+      mic.style.background = "#DC2626";
+      mic.innerHTML = "🔴";
+    }, 500);
+  },
+
+  stopWakeWord: function() {
+    if(this.wakeRecognition) {
+      try { this.wakeRecognition.abort(); } catch(e) {}
+      this.wakeRecognition = null;
+    }
+    this.isWakeListening = false;
+  },
+
+  getLang: function() {
+    if(window.DrishtiLang) {
+      return window.DrishtiLang.current === "english" ? "en-US" : "hi-IN";
+    }
+    return "hi-IN";
+  },
+
+  toggle: function() {
+    if(this.isListening) {
+      this.stop();
+    } else {
+      this.hasResult = false;
+      this.start();
+    }
+  },
+
+  start: function() {
+    if(this.isListening || this.isSending) return;
+
+    const SR = window.SpeechRecognition ||
+               window.webkitSpeechRecognition;
+
+    if(!SR) {
+      this.showMsg("Chrome ya Safari use karo!", "error");
+      return;
+    }
+
+    if(this.recognition) {
+      try { this.recognition.abort(); } catch(e) {}
+      this.recognition = null;
+    }
+
+    this.recognition = new SR();
+    this.recognition.lang = this.getLang();
+    this.recognition.continuous = false;
+    this.recognition.interimResults = true;
+    this.recognition.maxAlternatives = 3;
+
+    this.recognition.onstart = () => {
+      this.isListening = true;
+      this.hasResult = false;
+      this.setMic(true);
+      this.showMsg("🎙 Sun rahi hoon...", "active");
     };
 
-    // ── 4. THE RECURSIVE ENGINE (THE LOGIC) ──
-    const Core = {
-        // --- WAKE WORD DAEMON (HAMESHA ON) ---
-        bootWake: function() {
-            if (_vss.current !== KERNEL.STATE.IDLE) return;
-            
-            Hardware.purge();
-            _vss.engine = Hardware.getRecognition();
-            if (!_vss.engine) return;
+    this.recognition.onresult = (e) => {
+      if(this.hasResult) return;
 
-            _vss.current = KERNEL.STATE.WAKE;
-            
-            _vss.engine.onresult = (e) => {
-                const transcript = Array.from(e.results)
-                    .map(r => r[0].transcript.toLowerCase())
-                    .join("");
-                
-                if (transcript.includes("drishti") || transcript.includes("दृष्टि")) {
-                    this.transitionToMain();
-                }
-            };
+      let interim = "";
+      let final = "";
 
-            _vss.engine.onend = () => {
-                if (_vss.current === KERNEL.STATE.WAKE) {
-                    setTimeout(() => this.bootWake(), 800);
-                }
-            };
+      for(let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if(e.results[i].isFinal) {
+          final += t;
+        } else {
+          interim += t;
+        }
+      }
 
-            _vss.engine.onerror = () => { this.rebootSystem(); };
+      const inp = document.getElementById("inp");
+      if(!inp) return;
 
-            try { _vss.engine.start(); } catch(e) { this.rebootSystem(); }
-        },
+      if(interim && !final) {
+        inp.value = interim;
+        inp.style.color = "#A855F7";
+      }
 
-        // --- MAIN LISTENER (THE ACTION) ---
-        transitionToMain: function() {
-            _vss.current = KERNEL.STATE.LISTENING;
-            Hardware.purge();
-            
-            if ("vibrate" in navigator) navigator.vibrate([40, 30, 40]);
-            
-            _vss.engine = Hardware.getRecognition();
-            _vss.engine.onstart = () => {
-                UI.update("🎙️ Sun rahi hoon...", "#DC2626", "active");
-            };
+      if(final) {
+        this.hasResult = true;
+        const clean = final.trim();
 
-            _vss.engine.onresult = (e) => {
-                let interim = "";
-                let final = "";
-                for (let i = e.resultIndex; i < e.results.length; i++) {
-                    if (e.results[i].isFinal) final += e.results[i][0].transcript;
-                    else interim += e.results[i][0].transcript;
-                }
+        // Wake word ko message se hatao
+        const filtered = clean
+          .replace(/hey drishti/gi, "")
+          .replace(/drishti/gi, "")
+          .replace(/दृष्टि/g, "")
+          .trim();
 
-                _vss.buffer = final || interim;
-                UI.drawInput(_vss.buffer, !!final);
+        inp.value = filtered || clean;
+        inp.style.color = "#ffffff";
+        this.lastInputWasVoice = true;
+        this.showMsg(`✅ Suna: "${filtered || clean}"`, "success");
 
-                // Gemini Logic: Silence detection
-                clearTimeout(_vss.debounce);
-                _vss.debounce = setTimeout(() => {
-                    if (_vss.buffer.trim() && _vss.current === KERNEL.STATE.LISTENING) {
-                        this.executeDispatch(_vss.buffer);
-                    }
-                }, KERNEL.CONFIG.SILENCE_THRESHOLD);
-            };
+        this.stop();
 
-            _vss.engine.onend = () => {
-                if (_vss.current === KERNEL.STATE.LISTENING && !_vss.isProcessing) {
-                    this.rebootSystem();
-                }
-            };
-
-            try { _vss.engine.start(); } catch(e) { this.rebootSystem(); }
-        },
-
-        // --- THE DISPATCHER (THE SENDER) ---
-        executeDispatch: function(payload) {
-            if (_vss.current === KERNEL.STATE.LOCKED) return;
-            
-            _vss.current = KERNEL.STATE.LOCKED;
-            _vss.isProcessing = true;
-            Hardware.purge();
-
-            UI.update("🚀 Processing...", "#059669", "sending");
-
-            // Apple Echo Protection (2 second buffer)
+        if(!this.isSending) {
+          this.isSending = true;
+          setTimeout(() => {
+            if(window.send) window.send();
             setTimeout(() => {
-                if (window.send && payload.trim()) {
-                    window.send();
-                }
-                
-                // Lockdown to prevent hearing its own voice
-                setTimeout(() => {
-                    _vss.isProcessing = false;
-                    _vss.current = KERNEL.STATE.IDLE;
-                    this.rebootSystem();
-                }, KERNEL.CONFIG.LOCKOUT_MS);
-            }, 400);
-        },
-
-        rebootSystem: function() {
-            Hardware.purge();
-            _vss.current = KERNEL.STATE.IDLE;
-            _vss.buffer = "";
-            UI.update("Ready! 'Hey Drishti' boliye", "#4B5563", "idle");
-            setTimeout(() => this.bootWake(), 1000);
+              if(inp) inp.style.color = "#ffffff";
+              this.isSending = false;
+              // Wake word wapas shuru karo
+              setTimeout(() => this.startWakeWord(), 1000);
+            }, 500);
+          }, 400);
         }
+      }
     };
 
-    // ── 5. UI ADAPTER (THE FACE) ──
-    const UI = {
-        update: (msg, col, mode) => {
-            const s = document.getElementById("sbar");
-            if(s) { s.textContent = msg; s.style.color = col; }
-            const m = document.getElementById("mic");
-            if(m) m.className = "mic-btn-quantum " + mode;
-        },
-        drawInput: (val, final) => {
-            const i = document.getElementById("inp");
-            if(i) { i.value = val; i.style.color = final ? "#fff" : "#A855F7"; }
-        }
+    this.recognition.onerror = (e) => {
+      if(e.error === "aborted") return;
+      if(e.error === "no-speech") {
+        this.showMsg("Kuch sunai nahi diya, dobara boliye!", "error");
+      } else if(e.error === "not-allowed") {
+        this.showMsg("⚠️ Settings > Microphone permission do!", "error");
+      } else {
+        this.showMsg("Error: " + e.error, "error");
+      }
+      this.reset();
+      setTimeout(() => this.startWakeWord(), 1000);
     };
 
-    // ── 6. BOOTLOADER ──
-    return {
-        start: function() {
-            console.log("%c DRISHTI QUANTUM LAYER v50 ONLINE ", "background:#7C3AED; color:#fff; padding:10px; font-weight:bold;");
-            
-            const btn = document.getElementById("mic");
-            if(btn) {
-                btn.onclick = (e) => {
-                    e.preventDefault();
-                    if (_vss.current !== KERNEL.STATE.LISTENING) Core.transitionToMain();
-                    else Core.executeDispatch(_vss.buffer);
-                };
-            }
-
-            // CSS Injection for Quantum UI
-            const style = document.createElement("style");
-            style.innerHTML = `
-                .mic-btn-quantum { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-                .mic-btn-quantum.active { transform: scale(1.2); box-shadow: 0 0 30px rgba(220, 38, 38, 0.6); background: #DC2626 !important; }
-                .mic-btn-quantum.sending { opacity: 0.5; pointer-events: none; }
-            `;
-            document.head.appendChild(style);
-
-            Core.bootWake();
-        }
+    this.recognition.onend = () => {
+      if(!this.hasResult && !this.isSending) {
+        this.reset();
+        setTimeout(() => this.startWakeWord(), 1000);
+      } else {
+        this.setMic(false);
+        this.isListening = false;
+      }
     };
-})();
 
-// Initialize
-DrishtiQuantum.start();
+    try {
+      this.recognition.start();
+    } catch(e) {
+      this.reset();
+    }
+  },
+
+  stop: function() {
+    this.isListening = false;
+    if(this.recognition) {
+      try { this.recognition.stop(); } catch(e) {}
+    }
+    this.setMic(false);
+  },
+
+  reset: function() {
+    this.isListening = false;
+    this.isSending = false;
+    this.hasResult = false;
+    if(this.recognition) {
+      try { this.recognition.abort(); } catch(e) {}
+      this.recognition = null;
+    }
+    this.setMic(false);
+    this.showMsg("Ready! 'Hey DRISHTI' bolo ya mic tap karo 🎙", "normal");
+  },
+
+  setMic: function(on) {
+    const mic = document.getElementById("mic");
+    if(!mic) return;
+    if(on) {
+      mic.style.background = "#DC2626";
+      mic.style.boxShadow = "0 0 20px #DC262688";
+      mic.innerHTML = "🔴";
+    } else {
+      mic.style.background = "#EC4899";
+      mic.style.boxShadow = "none";
+      mic.innerHTML = "🎙";
+    }
+  },
+
+  showMsg: function(msg, type) {
+    const s = document.getElementById("sbar");
+    if(!s) return;
+    s.textContent = msg;
+    const colors = {
+      active: "#A855F7",
+      success: "#059669",
+      error: "#DC2626",
+      normal: "#4B5563"
+    };
+    s.style.color = colors[type] || colors.normal;
+    if(type === "error") {
+      setTimeout(() => {
+        s.style.color = colors.normal;
+        s.textContent = "Ready! 'Hey DRISHTI' bolo ya mic tap karo 🎙";
+      }, 3000);
+    }
+  }
+};
+
+// Auto init
+if(document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => window.DrishtiVoice.init());
+} else {
+  window.DrishtiVoice.init();
+}
